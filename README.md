@@ -2,8 +2,6 @@
 
 AegisRoad is a modern civic infrastructure frontend built with React and Vite. It delivers an interactive municipal dashboard for road safety intelligence, contractor spend transparency, hazard reporting, and in-app monitoring.
 
-# Deployed Link : road-show-one.vercel.app
-
 ## 🚀 What this app includes
 
 - **Command Center**: Active incident monitoring with hazard ticket creation, SLA escalation controls, and operations visibility.
