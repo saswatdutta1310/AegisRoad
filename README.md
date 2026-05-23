@@ -15,7 +15,7 @@ AegisRoad is a modern civic infrastructure frontend built with React and Vite. I
 
 - Simulated civic hazard reporting workflow with live updates
 - Visual budget and spend analytics for public infrastructure contracts
-- Role-based dashboard panels for drivers, contractors, and command staff
+- Role-based dashboard panels for drivers, contractors.
 - Real-time filtering of hazards by severity, assignment, and status
 - Conversational assistant for quick data queries and audit-style summaries
 - Responsive layout built for modern desktop and tablet experiences
