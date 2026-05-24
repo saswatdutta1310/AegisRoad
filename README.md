@@ -27,7 +27,7 @@ AegisRoad is a modern civic infrastructure frontend built with React and Vite. I
 - `src/data.js` — sample hazard, contract, and contractor data used by the UI
 - `src/main.jsx` — React app bootstrap
 - `src/index.css` — base styling and Tailwind integration
-- `vite.config.ts` — Vite build configuration
+
 
 ## 🛠️ Built with
 
