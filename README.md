@@ -6,7 +6,7 @@ AegisRoad is a modern civic infrastructure frontend built with React and Vite. I
 
 - **Command Center**: Active incident monitoring with hazard ticket creation, SLA escalation controls, and operations visibility.
 - **SpendWatch Dashboard**: Contract budget analytics, disbursement tracking, and contractor efficiency scoring.
-- **Hazard Explorer**: Interactive road incident map with filters for severity, status, and location search.
+- **Hazard Explorer**: Interactive road incident map with filters for severity, status , and location search.
 - **AegisChat Assistant**: Conversational audit assistant for rapid queries over hazard and budget data.
 - **Driver Mobile & Contractor Portal**: Role-specific demo panels for field workers and contractor coordination.
 - **Landing Page**: Road defect reporting form, KPI highlights, and policy-forward product messaging.
