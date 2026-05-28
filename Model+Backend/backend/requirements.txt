@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pgvector
+alembic
+pydantic>=2.7
+pydantic-settings
+python-multipart
+pillow
+anthropic
+langchain
+langchain-anthropic
+python-dotenv
+httpx
+psycopg2-binary

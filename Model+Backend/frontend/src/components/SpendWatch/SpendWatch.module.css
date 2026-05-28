@@ -1,0 +1,41 @@
+.container { height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+.header    { padding: 20px 28px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.header h2 { font-size: 18px; font-weight: 700; }
+.sub       { font-size: 13px; color: var(--text2); margin-top: 4px; }
+.errorNote { font-size: 12px; color: var(--warning); margin-top: 6px; }
+
+.kpis { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.kpi  {
+  flex: 1; padding: 14px 20px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.kpi:last-child { border-right: none; }
+.kpiVal   { font-size: 22px; font-weight: 700; }
+.kpiLabel { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.grid  { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+.panel { padding: 20px; border-right: 1px solid var(--border); overflow-y: auto; }
+.panel:last-child { border-right: none; }
+.panelTitle { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; padding: 6px 8px; color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--border); }
+.row td   { padding: 8px; border-bottom: 1px solid var(--border); }
+.row:hover { background: var(--bg3); }
+.dim  { color: var(--text2); }
+
+.scoreWrap { display: flex; align-items: center; gap: 8px; }
+.scoreBg   { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.scoreFill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+
+.slaList { display: flex; flex-direction: column; gap: 10px; }
+.slaCard { background: var(--bg3); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 5px; }
+.slaTop  { display: flex; justify-content: space-between; align-items: center; }
+.slaRoad { font-size: 13px; font-weight: 600; }
+.slaStatus { font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid; }
+.slaMeta { font-size: 11px; color: var(--text2); display: flex; gap: 6px; }
+.slaContractor { font-size: 12px; color: var(--text2); }
+
+.skeleton { display: flex; flex-direction: column; gap: 10px; padding: 10px 0; }
+.skeletonRow { height: 32px; background: var(--bg3); border-radius: 6px; animation: shimmer 1.2s infinite; }
+@keyframes shimmer { 0%,100%{ opacity:0.5 } 50%{ opacity:1 } }

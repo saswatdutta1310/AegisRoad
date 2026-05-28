@@ -1,0 +1,163 @@
+{
+  "hazards": [
+    {
+      "id": "1",
+      "lat": 16.5417,
+      "lng": 80.5152,
+      "cls": "D40",
+      "severity": "critical",
+      "road_name": "NH-16, Vijayawada",
+      "status": "open",
+      "sla_hours": 24,
+      "reported": "2026-05-23T10:02:00",
+      "contractor": "Ramesh Road Works"
+    },
+    {
+      "id": "2",
+      "lat": 16.3067,
+      "lng": 80.4365,
+      "cls": "D20",
+      "severity": "high",
+      "road_name": "SH-47, Guntur",
+      "status": "in_progress",
+      "sla_hours": 48,
+      "reported": "2026-05-23T07:30:00",
+      "contractor": "AP Infrastructure Ltd"
+    },
+    {
+      "id": "3",
+      "lat": 16.4307,
+      "lng": 80.6241,
+      "cls": "D10",
+      "severity": "medium",
+      "road_name": "NH-65, Mangalagiri",
+      "status": "resolved",
+      "sla_hours": 72,
+      "reported": "2026-05-22T14:00:00",
+      "contractor": "National Highway Corp"
+    },
+    {
+      "id": "4",
+      "lat": 16.582,
+      "lng": 80.6278,
+      "cls": "D00",
+      "severity": "low",
+      "road_name": "MDR-22, Tadepalle",
+      "status": "in_progress",
+      "sla_hours": 96,
+      "reported": "2026-05-22T09:15:00",
+      "contractor": "Coastal Road Builders"
+    },
+    {
+      "id": "5",
+      "lat": 16.276,
+      "lng": 80.4534,
+      "cls": "D40",
+      "severity": "critical",
+      "road_name": "NH-16, Tenali",
+      "status": "open",
+      "sla_hours": 24,
+      "reported": "2026-05-23T11:45:00",
+      "contractor": "Deccan Infra Pvt Ltd"
+    },
+    {
+      "id": "6",
+      "lat": 16.49,
+      "lng": 80.59,
+      "cls": "D20",
+      "severity": "high",
+      "road_name": "SH-12, Pedana",
+      "status": "open",
+      "sla_hours": 48,
+      "reported": "2026-05-23T08:10:00",
+      "contractor": "AP Infrastructure Ltd"
+    },
+    {
+      "id": "7",
+      "lat": 16.35,
+      "lng": 80.61,
+      "cls": "D10",
+      "severity": "medium",
+      "road_name": "NH-65, Kaza",
+      "status": "open",
+      "sla_hours": 72,
+      "reported": "2026-05-23T06:00:00",
+      "contractor": "Ramesh Road Works"
+    },
+    {
+      "road_name": "Auto-detected via GPS",
+      "lat": 16.4307,
+      "lng": 80.6241,
+      "cls": "D43-SURFACEDAMAGE",
+      "severity": "medium",
+      "status": "open",
+      "sla_hours": 72,
+      "reported": "2026-05-27T19:48:01.774Z",
+      "contractor": null,
+      "id": "sFvc2EY9PbE"
+    }
+  ],
+  "contractors": [
+    {
+      "id": "1",
+      "name": "Ramesh Road Works",
+      "district": "Vijayawada",
+      "score": 87,
+      "contracts": 12,
+      "repaired": 11,
+      "avg_days": 1.8,
+      "budget": 48,
+      "spent": 41,
+      "active_sla": 1
+    },
+    {
+      "id": "2",
+      "name": "AP Infrastructure Ltd",
+      "district": "Guntur",
+      "score": 72,
+      "contracts": 8,
+      "repaired": 6,
+      "avg_days": 3.2,
+      "budget": 62,
+      "spent": 58,
+      "active_sla": 2
+    },
+    {
+      "id": "3",
+      "name": "National Highway Corp",
+      "district": "Mangalagiri",
+      "score": 91,
+      "contracts": 20,
+      "repaired": 19,
+      "avg_days": 1.1,
+      "budget": 120,
+      "spent": 98,
+      "active_sla": 1
+    },
+    {
+      "id": "4",
+      "name": "Coastal Road Builders",
+      "district": "Krishna",
+      "score": 55,
+      "contracts": 6,
+      "repaired": 3,
+      "avg_days": 5.6,
+      "budget": 35,
+      "spent": 34,
+      "active_sla": 3
+    },
+    {
+      "id": "5",
+      "name": "Deccan Infra Pvt Ltd",
+      "district": "Prakasam",
+      "score": 63,
+      "contracts": 9,
+      "repaired": 6,
+      "avg_days": 4.1,
+      "budget": 55,
+      "spent": 52,
+      "active_sla": 3
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}
