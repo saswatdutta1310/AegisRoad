@@ -11,7 +11,7 @@
 
 > **Real-time hazard intelligence · Contractor fiscal auditing · Edge AI defect detection · Conversational AI assistant**
 
-AegisRoad is a **full-stack civic-tech platform** that empowers municipal officers, field drivers, and contractors with real-time road hazard intelligence, transparent spend tracking, and AI-powered defect detection. Built for the Indian civic infrastructure domain, it combines **computer vision (YOLOv8)**, **large language models (Claude Sonnet 4)**, and **modern web technologies** into a unified command-and-control dashboard.
+AegisRoad is a **full-stack civic-tech platform** that empowers municipal officers, field drivers, and contractors with real-time road hazard intelligence, transparent spend tracking, and AI-powered defect detection. Built for the Indian civic infrastructure domain,  combines with **computer vision (YOLOv8)**, **large language models (Claude Sonnet 4)**, and **modern web technologies** into a unified command-and-control dashboard.
 
 ---
 
