@@ -105,14 +105,17 @@ export default function HazardExplorer({
       {/* Map, Sidebar and detail Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left GIS Vector Map taking up 3 cols */}
-        <div className="lg:col-span-3 h-[450px] bg-slate-950 border border-slate-800 rounded-xl p-2 relative">
-          <InteractiveMap
-            hazards={filtered}
-            contracts={contracts}
-            activeView="hazard"
-            selectedHazardId={selectedHazard?.id}
-            onSelectHazard={(h) => setSelectedHazardId(h.id)}
-          />
+        <div className="lg:col-span-3 h-[450px] min-h-[450px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 p-2">
+            <InteractiveMap
+              className="rounded-lg"
+              hazards={filtered}
+              contracts={contracts}
+              activeView="hazard"
+              selectedHazardId={selectedHazard?.id}
+              onSelectHazard={(h) => setSelectedHazardId(h.id)}
+            />
+          </div>
         </div>
 
         {/* Right Active Incident Feed List taking up 1 col */}

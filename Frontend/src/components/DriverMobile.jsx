@@ -155,15 +155,16 @@ export default function DriverMobile({
             </button>
           </div>
           
-          <div className="flex-1 w-full relative">
+          <div className="flex-1 min-h-[280px] w-full relative overflow-hidden">
             <InteractiveMap
-              hazards={activeJobs} // Only show jobs for this crew on their map
+              className="rounded-none"
+              hazards={activeJobs}
               selectedHazardId={activeJob?.id}
               activeView="driver"
               onSelectHazard={(h) => setSelectedJobId(h.id)}
             />
             {/* HUD Overlay */}
-            <div className="absolute bottom-4 left-4 z-[400] bg-slate-950/90 border border-slate-800 p-3 rounded-xl backdrop-blur-sm pointer-events-none">
+            <div className="absolute bottom-4 left-4 z-[5] bg-slate-950/90 border border-slate-800 p-3 rounded-xl backdrop-blur-sm pointer-events-none">
               <div className="text-[10px] uppercase font-bold text-slate-500 font-mono">Current Vector</div>
               <div className="text-xl font-black text-white">42 <span className="text-xs text-slate-400">km/h</span></div>
             </div>

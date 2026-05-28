@@ -6,8 +6,6 @@ import {
   Search, ArrowDownRight, ArrowUpRight, Award, ShieldAlert, 
   Coins, Filter, ChevronRight, HelpCircle, FileSpreadsheet, Building 
 } from 'lucide-react';
-import InteractiveMap from './InteractiveMap';
-
 export default function SpendWatch({
   contracts = [],
   contractors = [],

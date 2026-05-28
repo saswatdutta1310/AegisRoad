@@ -275,8 +275,8 @@ export default function CommandCenter({
       {/* Main split: Map + Sidebar Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Visual Map Frame */}
-        <div className="lg:col-span-3 h-[450px] bg-[#0c1222]/80 border border-slate-850 rounded-xl p-2.5 relative flex flex-col shadow-2xl">
-          <div className="flex items-center justify-between pb-2 px-1 border-b border-slate-900">
+        <div className="lg:col-span-3 h-[450px] min-h-[450px] bg-[#0c1222]/80 border border-slate-850 rounded-xl overflow-hidden relative flex flex-col shadow-2xl">
+          <div className="flex items-center justify-between shrink-0 px-3 py-2 border-b border-slate-900">
             <span className="text-[9px] font-black text-slate-500 font-mono uppercase tracking-widest">
               Digital Blueprint Vector Engine
             </span>
@@ -285,8 +285,9 @@ export default function CommandCenter({
               GIS SYNCHRONIZED
             </div>
           </div>
-          <div className="flex-1 rounded-lg overflow-hidden mt-2">
+          <div className="flex-1 min-h-0 p-2 pt-0">
             <InteractiveMap
+              className="rounded-lg"
               hazards={filteredHazards}
               contracts={contracts}
               activeView="hazard"
@@ -595,8 +596,8 @@ export default function CommandCenter({
 
       {/* Dynamic Patrol Deployment Modal (Dispatcher Dialog) */}
       {reportModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] rounded-xl shadow-2xl border border-slate-800 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="aegis-modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] rounded-xl shadow-2xl border border-slate-800 w-full max-w-md max-h-[90vh] overflow-y-auto animate-fadeIn">
             <div className="bg-[#0b1329] p-4 flex justify-between items-center border-b border-slate-800">
               <h3 className="font-extrabold text-sm text-white flex items-center gap-2 uppercase tracking-wide">
                 <AlertCircle size={15} className="text-amber-500" />

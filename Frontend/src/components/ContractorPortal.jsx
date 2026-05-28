@@ -486,7 +486,7 @@ export default function ContractorPortal({
 
       {/* QUICK TOOLS MODAL OVERLAY */}
       {activeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="aegis-modal-overlay fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#0c1223] border border-slate-700 rounded-xl w-full max-w-xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn">
             
             {/* Modal Header */}
