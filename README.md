@@ -16,8 +16,6 @@ AegisRoad automates how municipal governments detect road hazards, assign contra
 
 AegisRoad is a **full-stack civic-tech platform** for municipal officers, field drivers, and contractors — combining **YOLOv8** defect detection, **Claude Sonnet 4** (AegisChat), and role-based dashboards into one command-and-control system.
 
-**📄 Full workflow guide:** [`AegisRoad_Complete_Workflow_Guide.docx`](./AegisRoad_Complete_Workflow_Guide.docx)
-
 ---
 
 ## 🚀 Quick Start (Windows)
