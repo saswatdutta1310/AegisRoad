@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { 
   Building, LayoutDashboard, ShieldCheck, Map, Smartphone, Wrench, 
-  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye
+  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye, Camera
 } from 'lucide-react';
 import { 
-  INITIAL_HAZARDS, 
   INITIAL_CONTRACTS, 
-  INITIAL_CONTRACTOR_HEALTH, 
   INITIAL_SLA_BREACHES 
 } from './data';
 import CommandCenter from './components/CommandCenter';
@@ -17,9 +15,15 @@ import ContractorPortal from './components/ContractorPortal';
 import AegisChat from './components/AegisChat';
 import LandingPage from './components/LandingPage';
 import AuthSystem from './components/AuthSystem';
+import EdgeAI from './components/EdgeAI';
+import { HazardProvider, useHazards } from './context/HazardContext';
+import { SpendProvider, useSpend } from './context/SpendContext';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('landing'); // 'landing', 'command', 'spend', 'explorer', 'driver', 'contractor'
+function AppShell() {
+  const { hazards, addHazard, modifyHazard } = useHazards();
+  const { contractors } = useSpend();
+  
+  const [activeTab, setActiveTab] = useState('landing'); // 'landing', 'command', 'spend', 'explorer', 'driver', 'contractor', 'edgeai'
   
   // Auth State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -50,56 +54,24 @@ export default function App() {
     } catch (e) {}
   };
   
-  // Master reactive states
-  const [hazards, setHazards] = useState(INITIAL_HAZARDS);
+  // Master reactive states for non-API data
   const [contracts, setContracts] = useState(INITIAL_CONTRACTS);
-  const [contractors, setContractors] = useState(INITIAL_CONTRACTOR_HEALTH);
   const [slaBreaches, setSlaBreaches] = useState(INITIAL_SLA_BREACHES);
 
   // Trigger to append a newly reported hazard
   const handleReportHazard = (newHazard) => {
-    const freshId = `HAZ-${Math.floor(Math.random() * 9000) + 1000}`;
-    const freshObj = {
-      ...newHazard,
-      id: freshId,
-      reportedTimeAgo: "1m ago"
-    };
-    setHazards(prev => [freshObj, ...prev]);
-
-    // Update active contractor stats if contractor is assigned in creation
-    if (newHazard.contractor) {
-      setContractors(prev => prev.map(c => {
-        if (c.name === newHazard.contractor) {
-          return { ...c, activeJobs: c.activeJobs + 1 };
-        }
-        return c;
-      }));
-    }
+    addHazard({
+      ...newHazard, 
+      road_name: newHazard.location || newHazard.road_name || 'Unknown road',
+      cls: newHazard.cls || 'D40',
+      lat: newHazard.coordinates?.lat ?? 16.4307,
+      lng: newHazard.coordinates?.lng ?? 80.6241,
+    });
   };
 
   // Trigger to update attributes on an existing hazard
   const handleModifyHazard = (id, updates) => {
-    setHazards(prev => prev.map(h => {
-      if (h.id === id) {
-        const merged = { ...h, ...updates };
-        
-        // If state changed to completed, adjust active count of contractor
-        if (updates.status === 'completed' && h.status !== 'completed' && h.contractor) {
-          setContractors(older => older.map(c => {
-            if (c.name === h.contractor) {
-              return { 
-                ...c, 
-                activeJobs: Math.max(0, c.activeJobs - 1),
-                successRate: Math.min(100, parseFloat((c.successRate + 0.8).toFixed(1)))
-              };
-            }
-            return c;
-          }));
-        }
-        return merged;
-      }
-      return h;
-    }));
+    modifyHazard(id, updates);
   };
 
   // Action on SLA breach list
@@ -145,7 +117,7 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-base font-black text-white leading-tight tracking-[0.05em] uppercase flex items-center gap-1">
-                  AegisRoad <span className="text-[9px] bg-emerald-950 text-[#2ea014] border border-[#2ea014]/40 font-bold px-1.5 py-0.5 rounded ml-1 font-mono">v1.3</span>
+                  AegisRoad <span className="text-[9px] bg-emerald-950 text-[#2ea014] border border-[#2ea014]/40 font-bold px-1.5 py-0.5 rounded ml-1 font-mono">v3.0</span>
                 </h1>
                 <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none mt-1 font-mono">Civil Pavement & Spend Safety</p>
               </div>
@@ -204,7 +176,7 @@ export default function App() {
                 title="Formerly SpendWatch"
               >
                 <Coins size={11} />
-                Span Watch
+                Spend Watch
               </button>
 
               <button
@@ -218,7 +190,20 @@ export default function App() {
                 title="Formerly Spatial Radar"
               >
                 <Map size={11} />
-                Partial Reader
+                Hazard Map
+              </button>
+              
+              <button
+                id="nav-tab-edgeai"
+                onClick={() => setActiveTab('edgeai')}
+                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                  activeTab === 'edgeai' 
+                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Camera size={11} />
+                Edge AI
               </button>
 
               <button
@@ -340,6 +325,10 @@ export default function App() {
             onModifyHazard={handleModifyHazard}
           />
         )}
+        
+        {activeTab === 'edgeai' && (
+          <EdgeAI />
+        )}
 
         {activeTab === 'driver' && (
           <DriverMobile
@@ -381,5 +370,15 @@ export default function App() {
         contracts={contracts} 
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <HazardProvider>
+      <SpendProvider>
+        <AppShell />
+      </SpendProvider>
+    </HazardProvider>
   );
 }

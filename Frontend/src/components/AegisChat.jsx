@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, X, Bot, Sparkles, User, HelpCircle } from 'lucide-react';
+import { chatApi } from '../services/api';
+
+const QUICK = [
+  { text: 'Potholes on NH65?',   query: 'Are there active pothole issues on NH65?' },
+  { text: 'BuildFast compliant?', query: 'Is BuildFast Pvt. Ltd. meeting repair deadlines?' },
+  { text: 'Budget utilisation?',  query: 'What is the total spend and budget utilisation?' },
+  { text: 'Critical SLA alerts?', query: 'Any critical unassigned hazards or SLA escalations?' },
+];
 
 export default function AegisChat({ hazards = [], contracts = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
-      sender: 'assistant',
+      role: 'assistant',
       text: "Welcome, Officer. I am Aegis Intelligence, your municipal road safety and fiscal auditor bot. I have digested the active GIS hazard logs and SpendWatch tables for the current quarter. Ask me anything about regional road conditions, contractor accountability, or budget utilization rates.",
       timestamp: new Date()
     }
@@ -15,92 +23,33 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
-  const predefinedQueries = [
-    { text: "Potholes on NH65?", query: "Are there any active pothole issues on NH65?" },
-    { text: "Is BuildFast complying?", query: "Is contractor BuildFast Pvt. Ltd. meeting its repair deadlines?" },
-    { text: "Aggregate budget spend?", query: "What is the total spend and budget utilization across all districts?" },
-    { text: "Critical SLA bypass alerts?", query: "Are there any critical unassigned hazards or SLA escalations?" }
-  ];
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isTyping]);
 
-  const handleSendMessage = (text) => {
-    if (!text.trim()) return;
-
-    const userMessage = {
-      id: Math.random().toString(),
-      sender: 'user',
-      text: text,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputVal('');
+  const handleSendMessage = async (text) => {
+    if (!text.trim() || isTyping) return;
+    const userMsg = { id: crypto.randomUUID(), role: 'user', text: text, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+    setInputVal(''); 
     setIsTyping(true);
-
-    setTimeout(() => {
-      let replyText = '';
-      let citations = [];
-
-      const normalizedText = text.toLowerCase();
-
-      if (normalizedText.includes('nh65') || normalizedText.includes('pothole') || normalizedText.includes('asphalt')) {
-        const matches = hazards.filter(h => h.location.toLowerCase().includes('nh65') || h.title.toLowerCase().includes('pothole') || h.title.toLowerCase().includes('asphalt'));
-        if (matches.length > 0) {
-          const first = matches[0];
-          replyText = `Audit details retrieved: Found ${matches.length} active asphalt failures on NH65 / Downtown corridors. Most critical: ${first.id} (${first.title}) located at "${first.location}". Status: ${first.status}. `;
-          if (first.contractor) {
-            replyText += `The contract is held by "${first.contractor}" with completion tracking at ${first.completionPercent}%. They must wrap up within ${first.timeRemaining || 'the next few hours'} to avoid standard municipal SLA penalties.`;
-          } else {
-            replyText += `Currently unassigned. Recommended dispatch protocols are requested immediately to deploy emergency patching units.`;
-          }
-          citations = matches.map(m => ({ id: m.id, title: m.title, type: 'hazard' }));
-        } else {
-          replyText = `No active structural potholes are currently registered inside our database. All GIS nodes in the NH65 segment show a nominal Quality index.`;
-        }
-      } else if (normalizedText.includes('buildfast') || normalizedText.includes('contractor') || normalizedText.includes('buildright') || normalizedText.includes('health')) {
-        const bfJobs = hazards.filter(h => h.contractor && h.contractor.toLowerCase().includes('buildfast'));
-        const bfContracts = contracts.filter(c => c.contractor.toLowerCase().includes('buildfast'));
-
-        replyText = `Contractor evaluation: BuildFast Pvt. Ltd. holds ${bfContracts.length} high-value contracts totalling ₹${bfContracts.reduce((acc, c) => acc + c.tenderValue, 0).toFixed(1)}Cr. They maintain an aggregate Operational Efficiency Score of ${bfContracts[0]?.efficiencyScore || 96}% (Optimal status). `;
-        if (bfJobs.length > 0) {
-          replyText += `They currently have ${bfJobs.length} active emergency patches assigned including ${bfJobs[0].id} which is ${bfJobs[0].completionPercent}% complete. Standard SLA metrics indicate high reliability (94.5% SLA adherence).`;
-        } else {
-          replyText += `All assigned repair tasks are fully resolved. No pending SLA breaches logged.`;
-        }
-        citations = bfContracts.map(bc => ({ id: bc.id, title: bc.name, type: 'contract' }));
-      } else if (normalizedText.includes('spend') || normalizedText.includes('budget') || normalizedText.includes('utiliz') || normalizedText.includes('crore')) {
-        const totalAllocated = contracts.reduce((acc, c) => acc + c.budgetAllocated, 0);
-        const totalDisbursed = contracts.reduce((acc, c) => acc + c.amountDisbursed, 0);
-        const utilization = ((totalDisbursed / totalAllocated) * 100).toFixed(1);
-
-        replyText = `Fiscal auditing: The municipal administration has allocated ₹${totalAllocated.toFixed(2)}Cr across sectors for road infrastructure expansions. Current actual funds disbursed tracking sits at ₹${totalDisbursed.toFixed(2)}Cr, resulting in an aggregate Budget Utilization Index of ${utilization}%. `;
-        replyText += `Top efficiency segment: ${contracts[0]?.name} (Tender Value ₹${contracts[0]?.tenderValue}Cr, holding score of 96%). The lowest-performing asset is Sector 12 smart light allocation under Metro Build Co.`;
-        citations = contracts.map(c => ({ id: c.id, title: `${c.contractor} Contract`, type: 'contract' }));
-      } else if (normalizedText.includes('sla') || normalizedText.includes('escalat') || normalizedText.includes('critical')) {
-        const criticalCount = hazards.filter(h => h.severity === 'critical').length;
-        replyText = `SLA telemetry: Currently detecting ${criticalCount} CRITICAL severity hazard nodes across district. Furthermore, the municipal SLA breach board has flagged active escalations: "Major Pothole Escalation" (14 minutes late, Sector 12) and "Traffic Signal Failure" (2 hours late, Broadway). Re-dispatch instructions have been prepared.`;
-        citations = [
-          { id: 'SLA-101', title: 'Major Pothole Escalation', type: 'hazard' },
-          { id: 'SLA-102', title: 'Signal Failure Timeout', type: 'hazard' }
-        ];
-      } else {
-        replyText = `Understood. Analyzing Aegis database... Currently managing ${hazards.length} registered hazards and ${contracts.length} active commercial public road grants. Safety indexes are operating at 88% overall compliance. Please specify a category (Potholes, Budgets, Contractor Names) to fetch grounded, cited metrics.`;
-      }
-
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: Math.random().toString(),
-        sender: 'assistant',
-        text: replyText,
-        timestamp: new Date(),
-        citations: citations.length > 0 ? citations : undefined
-      }]);
-    }, 1000);
+    
+    const history = messages
+      .filter(m => m.role==='user' || m.role==='assistant')
+      .map(m => ({ role: m.role, content: m.text }));
+      
+    try {
+      const reply = await chatApi.send(text, history);
+      setMessages(prev => [...prev,
+        { id: crypto.randomUUID(), role: 'assistant', text: reply, timestamp: new Date() }]);
+    } catch {
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant',
+        text: 'Connection error. Check AegisRoad backend is running.', timestamp: new Date() }]);
+    } finally { 
+      setIsTyping(false); 
+    }
   };
 
   return (
@@ -118,7 +67,7 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
               </div>
               <div>
                 <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
-                  Aegis Intelligence <span className="bg-emerald-950 text-[#2ea014] text-[9px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">RAG Bot</span>
+                  Aegis Intelligence <span className="bg-emerald-950 text-[#2ea014] text-[9px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">Claude Sonnet 4</span>
                 </h3>
                 <p className="text-[10px] text-slate-400">Road Safety & Budget Audits</p>
               </div>
@@ -134,8 +83,8 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
           {/* Messages block */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/60 scrollbar-thin">
             {messages.map((m) => (
-              <div key={m.id} className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.sender === 'assistant' && (
+              <div key={m.id} className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {m.role === 'assistant' && (
                   <div className="w-7 h-7 bg-slate-800 rounded flex items-center justify-center text-[#2ea014] self-start shrink-0">
                     <Bot size={14} />
                   </div>
@@ -144,34 +93,19 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
                 <div className="flex flex-col max-w-[80%] gap-1">
                   <div 
                     className={`p-3 rounded-lg text-xs leading-relaxed ${
-                      m.sender === 'user'
+                      m.role === 'user'
                         ? 'bg-[#2ea014] text-white rounded-tr-none'
                         : 'bg-slate-900 text-slate-100 border border-slate-800 rounded-tl-none'
                     }`}
                   >
                     <p>{m.text}</p>
-
-                    {m.citations && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap gap-1.5">
-                        <span className="text-[9px] text-slate-400 block w-full">Grounded Documents:</span>
-                        {m.citations.map((c, i) => (
-                          <span 
-                            key={i}
-                            className="bg-slate-950 text-[#2ea014] border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono select-all flex items-center gap-1"
-                          >
-                            <span className="w-1 h-1 bg-[#2ea014] rounded-full"></span>
-                            {c.id} ({c.type === 'hazard' ? 'GIS' : 'SpendWatch'})
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                   <span className="text-[9px] text-slate-500 font-mono self-end">
                     {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
 
-                {m.sender === 'user' && (
+                {m.role === 'user' && (
                   <div className="w-7 h-7 bg-[#2ea014]/20 border border-[#2ea014]/50 rounded flex items-center justify-center text-[#2ea014] self-start shrink-0">
                     <User size={14} />
                   </div>
@@ -197,9 +131,9 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
           {/* Quick Predefined Queries block */}
           {messages.length === 1 && (
             <div className="p-3 bg-slate-950 border-t border-slate-900">
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">RAG Query Shortcuts</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Quick Queries</span>
               <div className="grid grid-cols-2 gap-1.5">
-                {predefinedQueries.map((item, idx) => (
+                {QUICK.map((item, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(item.query)}
@@ -224,12 +158,12 @@ export default function AegisChat({ hazards = [], contracts = [] }) {
               type="text"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              placeholder="Query database, budget formulas, etc..."
+              placeholder="Query road conditions, SLA compliance..."
               className="flex-1 bg-slate-900 text-white text-xs border border-slate-800 focus:border-[#2ea014] rounded p-2 focus:outline-none placeholder-slate-500"
             />
             <button
               type="submit"
-              disabled={!inputVal.trim()}
+              disabled={!inputVal.trim() || isTyping}
               className="px-3 bg-[#2ea014] hover:bg-[#258210] disabled:bg-slate-800 text-white disabled:text-slate-500 text-xs font-bold rounded flex items-center justify-center transition-colors shadow"
             >
               <Send size={14} />
