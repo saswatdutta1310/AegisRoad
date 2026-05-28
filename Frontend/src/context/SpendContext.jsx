@@ -1,18 +1,25 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { INITIAL_CONTRACTOR_HEALTH } from '../data'
 import { contractorApi } from '../services/api'
- 
+
 const SpendContext = createContext(null)
- 
+
 export function SpendProvider({ children }) {
-  const [contractors, setContractors] = useState([])
-  const [isLoading,   setIsLoading]   = useState(true)
+  const [contractors, setContractors] = useState(INITIAL_CONTRACTOR_HEALTH)
+  const [isLoading,   setIsLoading]   = useState(false)
   const [error,       setError]       = useState(null)
- 
+
   const fetchContractors = useCallback(async () => {
-    setIsLoading(true); setError(null)
-    try { setContractors(await contractorApi.getAll()) }
-    catch { setError('Could not load contractor data.') }
-    finally { setIsLoading(false) }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const remote = await contractorApi.getAll()
+      if (remote?.length) setContractors(remote)
+    } catch {
+      setError('Using offline contractor data (start backend for live sync).')
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
  
   useEffect(() => { fetchContractors() }, [fetchContractors])

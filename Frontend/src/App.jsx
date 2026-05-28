@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Building, LayoutDashboard, ShieldCheck, Map, Smartphone, Wrench, 
-  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye, Camera
+  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye, Camera, AlertTriangle
 } from 'lucide-react';
 import { 
   INITIAL_CONTRACTS, 
@@ -16,6 +16,7 @@ import AegisChat from './components/AegisChat';
 import LandingPage from './components/LandingPage';
 import AuthSystem from './components/AuthSystem';
 import EdgeAI from './components/EdgeAI';
+import CitizenReport from './components/CitizenReport';
 import { HazardProvider, useHazards } from './context/HazardContext';
 import { SpendProvider, useSpend } from './context/SpendContext';
 
@@ -35,11 +36,13 @@ function AppShell() {
     }
   });
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [contractorGuestMode, setContractorGuestMode] = useState(false);
-  const [driverGuestMode, setDriverGuestMode] = useState(true);
 
   const handleLogin = (user) => {
     setCurrentUser(user);
+    // Auto-navigate to the role's default portal
+    if (user.role === 'government') setActiveTab('command');
+    else if (user.role === 'contractor') setActiveTab('contractor');
+    else if (user.role === 'worker') setActiveTab('driver');
     try {
       localStorage.setItem('aegis_auth_user', JSON.stringify(user));
     } catch (e) {}
@@ -47,7 +50,6 @@ function AppShell() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setContractorGuestMode(false);
     setActiveTab('landing');
     try {
       localStorage.removeItem('aegis_auth_user');
@@ -152,74 +154,98 @@ function AppShell() {
                 Overview
               </button>
 
-              <button
-                id="nav-tab-command"
-                onClick={() => setActiveTab('command')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'command' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <LayoutDashboard size={11} />
-                Command Center
-              </button>
+              {(!currentUser || currentUser.role === 'government') && (
+                <>
+                  {currentUser && currentUser.role === 'government' && (
+                    <>
+                      <button
+                        id="nav-tab-command"
+                        onClick={() => setActiveTab('command')}
+                        className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                          activeTab === 'command' 
+                            ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <LayoutDashboard size={11} />
+                        Command Center
+                      </button>
 
-              <button
-                id="nav-tab-spend"
-                onClick={() => setActiveTab('spend')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'spend' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Formerly SpendWatch"
-              >
-                <Coins size={11} />
-                Spend Watch
-              </button>
+                      <button
+                        id="nav-tab-spend"
+                        onClick={() => setActiveTab('spend')}
+                        className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                          activeTab === 'spend' 
+                            ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                        title="Formerly SpendWatch"
+                      >
+                        <Coins size={11} />
+                        Spend Watch
+                      </button>
 
-              <button
-                id="nav-tab-explorer"
-                onClick={() => setActiveTab('explorer')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'explorer' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Formerly Spatial Radar"
-              >
-                <Map size={11} />
-                Hazard Map
-              </button>
-              
-              <button
-                id="nav-tab-edgeai"
-                onClick={() => setActiveTab('edgeai')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'edgeai' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Camera size={11} />
-                Edge AI
-              </button>
+                    </>
+                  )}
 
-              <button
-                id="nav-tab-driver"
-                onClick={() => setActiveTab('driver')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'driver' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Smartphone size={11} />
-                Driver Mobile
-              </button>
+                  <button
+                    id="nav-tab-explorer"
+                    onClick={() => setActiveTab('explorer')}
+                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                      activeTab === 'explorer' 
+                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Public Transparency Map"
+                  >
+                    <Map size={11} />
+                    {currentUser?.role === 'government' ? 'Hazard Map' : 'Public Map'}
+                  </button>
 
-              {currentUser && (
+                  <button
+                    id="nav-tab-edgeai"
+                    onClick={() => setActiveTab('edgeai')}
+                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                      activeTab === 'edgeai' 
+                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Camera size={11} />
+                    Edge AI
+                  </button>
+
+                  <button
+                    id="nav-tab-citizen"
+                    onClick={() => setActiveTab('citizen')}
+                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                      activeTab === 'citizen' 
+                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <AlertTriangle size={11} />
+                    Report Issue
+                  </button>
+                </>
+              )}
+
+              {currentUser && currentUser.role === 'worker' && (
+                <button
+                  id="nav-tab-driver"
+                  onClick={() => setActiveTab('driver')}
+                  className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                    activeTab === 'driver' 
+                      ? 'bg-[#2ea014] text-white shadow font-extrabold' 
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Smartphone size={11} />
+                  Driver Mobile
+                </button>
+              )}
+
+              {currentUser && currentUser.role === 'contractor' && (
                 <button
                   id="nav-tab-contractor"
                   onClick={() => setActiveTab('contractor')}
@@ -229,7 +255,7 @@ function AppShell() {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <Wrench size={11} />
+                  <Building size={11} />
                   Contractor Portal
                 </button>
               )}
@@ -323,6 +349,7 @@ function AppShell() {
             contracts={contracts}
             onReportHazard={handleReportHazard}
             onModifyHazard={handleModifyHazard}
+            currentUser={currentUser}
           />
         )}
         
@@ -330,7 +357,11 @@ function AppShell() {
           <EdgeAI />
         )}
 
-        {activeTab === 'driver' && (
+        {activeTab === 'citizen' && (!currentUser || currentUser.role === 'government') && (
+          <CitizenReport onReportHazard={handleReportHazard} />
+        )}
+
+        {activeTab === 'driver' && currentUser && currentUser.role === 'worker' && (
           <DriverMobile
             hazards={hazards}
             onReportHazard={handleReportHazard}
@@ -340,13 +371,24 @@ function AppShell() {
         )}
 
         {activeTab === 'contractor' && (
-          <ContractorPortal
-            hazards={hazards}
-            contractors={contractors}
-            onModifyHazard={handleModifyHazard}
-            currentUser={currentUser}
-            onTriggerLogin={() => setIsAuthOpen(true)}
-          />
+          currentUser ? (
+            <ContractorPortal
+              hazards={hazards}
+              contractors={contractors}
+              onModifyHazard={handleModifyHazard}
+              currentUser={currentUser}
+              onTriggerLogin={() => setIsAuthOpen(true)}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 bg-slate-900 border border-slate-800 rounded-xl">
+              <Lock size={48} className="text-slate-600 mb-4" />
+              <h2 className="text-xl font-bold text-slate-300 mb-2">Access Denied</h2>
+              <p className="text-slate-500 mb-6">You must be logged in to access the Contractor Portal.</p>
+              <button onClick={() => setIsAuthOpen(true)} className="px-6 py-2 bg-[#2ea014] text-white font-bold rounded-lg hover:bg-emerald-600 transition">
+                Login Now
+              </button>
+            </div>
+          )
         )}
       </main>
 

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { ShieldCheck, User, Building, Wrench, Lock, Mail, UserPlus, LogIn, X, Info } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { authApi } from '../services/api';
 
 export default function AuthSystem({ isOpen, onClose, onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [role, setRole] = useState('contractor'); // 'contractor' | 'government'| 'worker'
+  const [role, setRole] = useState('contractor');
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    orgName: '',
+    orgName: 'BuildFast Pvt. Ltd.',
     password: ''
   });
 
@@ -16,48 +17,61 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
 
   const handleRoleChange = (selectedRole) => {
     setRole(selectedRole);
-    // Pre-populate default Org names to assist fast onboarding
     let defaultOrg = '';
     if (selectedRole === 'contractor') defaultOrg = 'BuildFast Pvt. Ltd.';
     else if (selectedRole === 'government') defaultOrg = 'Municipal Road Corp';
     else if (selectedRole === 'worker') defaultOrg = 'Eagle Eye Patrols';
-    
     setFormData(prev => ({ ...prev, orgName: defaultOrg }));
   };
 
+  // Quick login — purely frontend, no backend needed
   const handlePreloadDemo = (roleType, name, email, org) => {
-    const mockUser = {
-      username: name,
-      email: email,
-      role: roleType,
-      orgName: org
-    };
-    onLogin(mockUser);
-    toast.success(`Welcome back, ${name}! Logged in securely as ${roleType}.`);
+    const user = { username: name, email, role: roleType, orgName: org };
+    localStorage.setItem('aegis_auth_user', JSON.stringify(user));
+    onLogin(user);
+    toast.success(`Welcome, ${name}! Logged in as ${roleType}.`);
     onClose();
   };
 
-  const handleSubmit = (e) => {
+  const persistSession = (user, token) => {
+    localStorage.setItem('aegis_auth_user', JSON.stringify(user));
+    if (token) localStorage.setItem('aegis_jwt_token', token);
+    else localStorage.removeItem('aegis_jwt_token');
+    onLogin(user);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.username || !formData.email || !formData.password) {
       toast.error("Please fill out all required fields to continue.");
       return;
     }
 
-    const newUser = {
-      username: formData.username,
-      email: formData.email,
-      role: role,
-      orgName: formData.orgName || (role === 'contractor' ? 'BuildFast Pvt. Ltd.' : 'Aegis Division')
-    };
+    const orgName = formData.orgName || (role === 'contractor' ? 'BuildFast Pvt. Ltd.' : role === 'government' ? 'Municipal Road Corp' : 'Eagle Eye Patrols');
 
-    onLogin(newUser);
-    toast.success(
-      isRegister 
-        ? `Account registered successfully! Welcome aboard, ${formData.username}.`
-        : `Authenticated via secure credentials! Welcome back, ${formData.username}.`
-    );
-    onClose();
+    try {
+      if (isRegister) {
+        await authApi.register({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role,
+          orgName,
+        });
+        toast.success(`Account created! Signing you in…`);
+      }
+      const res = await authApi.login({ email: formData.email, password: formData.password });
+      persistSession(res.user, res.access_token);
+      toast.success(`Welcome, ${res.user.username}!`);
+      onClose();
+      return;
+    } catch {
+      // Offline demo fallback when backend is unavailable
+      const user = { username: formData.username, email: formData.email, role, orgName };
+      persistSession(user, null);
+      toast.success(isRegister ? `Demo account ready, ${formData.username}.` : `Demo login: ${formData.username}.`);
+      onClose();
+    }
   };
 
   return (
@@ -101,7 +115,6 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
             onClick={() => {
               setIsRegister(true);
               if (!formData.username) {
-                // Pre-populate org
                 setFormData(prev => ({ ...prev, orgName: 'BuildFast Pvt. Ltd.' }));
               }
             }}
@@ -151,7 +164,7 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
                 onClick={() => handleRoleChange('worker')}
                 className={`py-2 px-1 text-[9px] uppercase font-mono font-bold rounded border transition-colors flex flex-col items-center gap-1 ${
                   role === 'worker' 
-                    ? 'bg-amber-500/15 border-amber-550 border-amber-500 text-amber-400' 
+                    ? 'bg-amber-500/15 border-amber-500 text-amber-400' 
                     : 'bg-slate-950 border-slate-850 hover:border-slate-700 text-slate-400 hover:text-slate-300'
                 }`}
               >
@@ -256,7 +269,7 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
           <div className="grid grid-cols-1 gap-2">
             <button
               onClick={() => handlePreloadDemo('contractor', 'Sandra Arjun', 'sandra@buildfast.co.in', 'BuildFast Pvt. Ltd.')}
-              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-[#2ea014]/60 text-left transition-all group"
+              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-[#2ea014]/60 text-left transition-all group cursor-pointer"
             >
               <div>
                 <span className="block text-[10px] font-bold text-white group-hover:text-[#2ea014]">👷 Sandra Arjun (Contractor)</span>
@@ -267,7 +280,7 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
 
             <button
               onClick={() => handlePreloadDemo('government', 'Chief Inspector Rao', 'rao@municipality.gov', 'Municipal Road Corp')}
-              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-sky-500/60 text-left transition-all group"
+              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-sky-500/60 text-left transition-all group cursor-pointer"
             >
               <div>
                 <span className="block text-[10px] font-bold text-white group-hover:text-sky-400">🏛️ Chief Inspector Rao (Government)</span>
@@ -278,7 +291,7 @@ export default function AuthSystem({ isOpen, onClose, onLogin }) {
 
             <button
               onClick={() => handlePreloadDemo('worker', 'Sanjay Kumar', 'sanjay@eagleeye.com', 'Eagle Eye Patrols')}
-              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-amber-500/60 text-left transition-all group"
+              className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-850 hover:border-amber-500/60 text-left transition-all group cursor-pointer"
             >
               <div>
                 <span className="block text-[10px] font-bold text-white group-hover:text-amber-400">🚙 Sanjay Kumar (Field Driver)</span>

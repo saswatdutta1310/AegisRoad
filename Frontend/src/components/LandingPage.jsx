@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, ArrowRight, MapPin, Coins, Smartphone, Wrench, 
   Sparkles, Shield, BarChart3, Heart, Globe, AlertOctagon, Scale, Award,
-  CheckCircle2, Users, HelpCircle, Phone, Mail, MapPinned
+  CheckCircle2, Users, HelpCircle, Phone, Mail, MapPinned, Activity
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -304,7 +304,49 @@ export default function LandingPage({
           <div className="text-2xl sm:text-3xl font-display font-black text-emerald-400">+{stats.sensors}</div>
           <div className="text-[10px] text-slate-500 mt-0.5">Enrolled road user aids</div>
         </div>
-      </section>      {/* 3. About our Agency & Safety Commitment (Centered clean layout) */}
+      </section>
+
+      {/* 2.5 Live Resolution Feed (Public Transparency) */}
+      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 overflow-hidden relative">
+        <div className="absolute top-0 right-8 bg-[#2ea014] text-white text-[8px] font-mono uppercase px-3 py-1 rounded-b font-bold tracking-widest shadow-lg">
+          Live Transparency Feed
+        </div>
+        
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-display font-black text-white flex items-center gap-2">
+              <Activity className="text-[#2ea014]" size={20} /> 
+              Recent Contractor Resolutions
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Proof of work: Cryptographically verified infrastructure repairs completed in the last 24 hours.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { id: 'HAZ-8821', title: 'Severe Pothole', contractor: 'BuildFast Pvt. Ltd.', time: '14 mins ago', img: 'https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=300' },
+            { id: 'HAZ-1194', title: 'Guardrail Repair', contractor: 'Apex Infrastruct', time: '2 hours ago', img: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&q=80&w=300' },
+            { id: 'HAZ-6632', title: 'Drainage Clearance', contractor: 'Metro Build Co.', time: '5 hours ago', img: 'https://images.unsplash.com/photo-1485594050903-8e8ee7b071a8?auto=format&fit=crop&q=80&w=300' }
+          ].map((item, i) => (
+            <div key={i} className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3 flex items-center gap-4 hover:border-emerald-500/30 transition-colors">
+              <img src={item.img} alt="Repair" className="w-14 h-14 rounded-lg object-cover opacity-80" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-[#2ea014] font-mono font-bold tracking-wider">{item.id}</span>
+                  <span className="text-[9px] text-slate-500 font-mono">{item.time}</span>
+                </div>
+                <h4 className="text-sm font-bold text-slate-200 truncate">{item.title}</h4>
+                <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                  <CheckCircle2 size={10} className="text-emerald-500" />
+                  Verified by <span className="text-slate-300 font-bold truncate">{item.contractor}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. About our Agency & Safety Commitment (Centered clean layout) */}
       <section className="bg-white rounded-3xl p-6 md:p-10 lg:p-12 text-slate-950 border border-slate-200">
         <div className="max-w-3xl mx-auto space-y-5 text-center">
           <span className="text-xs text-[#2ea014] font-mono tracking-wider uppercase font-extrabold block">

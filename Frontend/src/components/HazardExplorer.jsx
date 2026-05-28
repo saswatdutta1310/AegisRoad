@@ -9,7 +9,8 @@ export default function HazardExplorer({
   hazards = [], 
   contracts = [],
   onReportHazard,
-  onModifyHazard
+  onModifyHazard,
+  currentUser
 }) {
   const [filterSeverity, setFilterSeverity] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -35,8 +36,10 @@ export default function HazardExplorer({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 border-b border-slate-800 pb-5">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-1.5">
-            Road Safety Incident Map
-            <span className="text-xs bg-[#2ea014]/25 text-[#2ea014] border border-[#2ea014]/65 font-normal px-2 py-0.5 rounded tracking-widest font-mono">CIVIC INTELLIGENCE</span>
+            {currentUser?.role === 'government' ? 'Road Safety Incident Map' : 'Public Transparency Map'}
+            <span className="text-xs bg-[#2ea014]/25 text-[#2ea014] border border-[#2ea014]/65 font-normal px-2 py-0.5 rounded tracking-widest font-mono">
+              {currentUser?.role === 'government' ? 'CIVIC INTELLIGENCE' : 'LIVE FEED'}
+            </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Browse verified road failures, active repair assignments, and real-time civil surveillance updates.
@@ -232,17 +235,24 @@ export default function HazardExplorer({
               </div>
 
               {!selectedHazard.contractor ? (
-                <button 
-                  onClick={() => onModifyHazard(selectedHazard.id, { 
-                    status: 'in-progress', 
-                    contractor: 'BuildFast Pvt. Ltd.', 
-                    completionPercent: 10,
-                    timeRemaining: "01:20:00"
-                  })}
-                  className="w-full text-xs font-black bg-[#2ea014] hover:bg-[#258210] text-white py-2.5 rounded transition-colors text-center"
-                >
-                  Instantly Dispatch Emergency Crew
-                </button>
+                currentUser?.role === 'government' ? (
+                  <button 
+                    onClick={() => onModifyHazard(selectedHazard.id, { 
+                      status: 'in-progress', 
+                      contractor: 'BuildFast Pvt. Ltd.', 
+                      completionPercent: 10,
+                      timeRemaining: "01:20:00"
+                    })}
+                    className="w-full text-xs font-black bg-[#2ea014] hover:bg-[#258210] text-white py-2.5 rounded transition-colors text-center"
+                  >
+                    Instantly Dispatch Emergency Crew
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5 p-2 bg-slate-900/40 border border-slate-800 rounded text-[11px] font-sans text-slate-400">
+                    <AlertTriangle size={16} />
+                    <span>Awaiting automatic government dispatch assignment.</span>
+                  </div>
+                )
               ) : (
                 <div className="flex items-center gap-1.5 p-2 bg-teal-950/40 border border-teal-900/60 rounded text-[11px] font-sans text-teal-400">
                   <ShieldCheck size={16} />

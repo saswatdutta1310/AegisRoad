@@ -1,19 +1,28 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { INITIAL_HAZARDS } from '../data'
 import { hazardApi } from '../services/api'
- 
+
 const HazardContext = createContext(null)
- 
+
+const isBackendId = (id) => /^\d+$/.test(String(id))
+
 export function HazardProvider({ children }) {
-  const [hazards,   setHazards]   = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [hazards,   setHazards]   = useState(INITIAL_HAZARDS)
+  const [isLoading, setIsLoading] = useState(false)
   const [error,     setError]     = useState(null)
   const [filter,    setFilter]    = useState('all')
- 
+
   const fetchHazards = useCallback(async () => {
-    setIsLoading(true); setError(null)
-    try { setHazards(await hazardApi.getAll()) }
-    catch (err) { setError('Could not load hazard data.') }
-    finally { setIsLoading(false) }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const remote = await hazardApi.getAll()
+      if (remote?.length) setHazards(remote)
+    } catch {
+      setError('Using offline demo hazard data (start backend for live sync).')
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
  
   useEffect(() => {
@@ -36,8 +45,12 @@ export function HazardProvider({ children }) {
     } catch { /* keep optimistic entry */ }
   }, [])
  
-  const modifyHazard = useCallback((id, updates) => {
+  const modifyHazard = useCallback(async (id, updates) => {
     setHazards(prev => prev.map(h => h.id===id ? {...h,...updates} : h))
+    if (!isBackendId(id)) return
+    try {
+      await hazardApi.update(id, updates)
+    } catch { /* keep optimistic entry */ }
   }, [])
  
   return (

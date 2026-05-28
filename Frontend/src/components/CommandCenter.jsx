@@ -507,6 +507,92 @@ export default function CommandCenter({
         </div>
       </div>
 
+      {/* Edge AI Live Camera Feed Simulator */}
+      <div className="bg-[#0f172a] border border-slate-850 rounded-xl p-5 shadow-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-base font-black text-slate-100 flex items-center gap-2">
+            <Sparkles size={16} className="text-purple-400" />
+            Edge AI — Live Camera Feed Analysis
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+            <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider">4 FEEDS ACTIVE</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { id: "CAM-04", location: "NH65 Downtown Flyover", detection: "Pothole Cluster", confidence: 97.2, severity: "critical", bbox: true },
+            { id: "CAM-11", location: "Industrial Zone Entry Ramp", detection: "Surface Cracking", confidence: 89.1, severity: "high", bbox: true },
+            { id: "CAM-07", location: "Riverside Pkwy Southbound", detection: "No Anomaly", confidence: 0, severity: "clear", bbox: false },
+            { id: "CAM-22", location: "Main St & Commerce", detection: "Debris on Lane", confidence: 74.8, severity: "medium", bbox: true },
+          ].map((cam, i) => (
+            <div key={cam.id} className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden group relative">
+              {/* Simulated camera viewport */}
+              <div className="relative h-36 bg-gradient-to-br from-slate-900 via-[#0a101e] to-slate-950 overflow-hidden">
+                {/* Simulated road surface */}
+                <div className="absolute inset-0 opacity-30">
+                  <div className="absolute top-[45%] left-0 right-0 h-[2px] bg-amber-700/50"></div>
+                  <div className="absolute top-[55%] left-0 right-0 h-[2px] bg-amber-700/50"></div>
+                  <div className="absolute top-[30%] left-[20%] right-[20%] h-[40%] bg-slate-800/40 rounded"></div>
+                </div>
+
+                {/* AI Scanning Line Animation */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60"
+                  style={{ animation: `scanline ${2 + i * 0.5}s ease-in-out infinite` }}></div>
+
+                {/* Bounding Box for Detection */}
+                {cam.bbox && (
+                  <div className="absolute top-[25%] left-[22%] w-[56%] h-[50%] border-2 border-dashed rounded-sm flex items-end justify-start p-1"
+                    style={{
+                      borderColor: cam.severity === 'critical' ? '#f43f5e' : cam.severity === 'high' ? '#f59e0b' : '#8b5cf6',
+                      animation: 'pulse 2s ease-in-out infinite'
+                    }}>
+                    <span className="text-[8px] font-mono font-black px-1 rounded"
+                      style={{
+                        background: cam.severity === 'critical' ? '#f43f5e' : cam.severity === 'high' ? '#f59e0b' : '#8b5cf6',
+                        color: '#000'
+                      }}>
+                      {cam.detection} — {cam.confidence}%
+                    </span>
+                  </div>
+                )}
+
+                {/* Crosshair overlay */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 border border-cyan-500/30 rounded-full"></div>
+                <div className="absolute top-1/2 left-0 right-0 h-px bg-cyan-900/20"></div>
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-cyan-900/20"></div>
+
+                {/* Camera ID */}
+                <div className="absolute top-2 left-2 text-[8px] font-mono font-bold text-cyan-500/80 bg-slate-950/70 px-1.5 py-0.5 rounded">
+                  {cam.id} • REC
+                </div>
+                <div className="absolute top-2 right-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse"></span>
+                </div>
+              </div>
+
+              {/* Camera Info Footer */}
+              <div className="p-2.5 space-y-1">
+                <div className="text-[10px] font-bold text-slate-300 truncate">{cam.location}</div>
+                <div className="flex justify-between items-center">
+                  <span className={`text-[9px] font-mono font-black uppercase tracking-wider ${
+                    cam.severity === 'critical' ? 'text-rose-400' :
+                    cam.severity === 'high' ? 'text-amber-400' :
+                    cam.severity === 'clear' ? 'text-emerald-400' : 'text-purple-400'
+                  }`}>
+                    {cam.severity === 'clear' ? '✓ ALL CLEAR' : `⚠ ${cam.detection}`}
+                  </span>
+                  {cam.confidence > 0 && (
+                    <span className="text-[9px] font-mono text-slate-500">{cam.confidence}%</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Dynamic Patrol Deployment Modal (Dispatcher Dialog) */}
       {reportModalOpen && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
