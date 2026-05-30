@@ -2,7 +2,7 @@
   <img src="https://img.icons8.com/color/96/000000/road-closure.png" alt="AegisRoad Logo" />
   
   # AegisRoad 🛡️🛣️
-  **Next-Generation Civic Infrastructure Automation Platform**
+  **Next-Generation-Civic Infrastructure Automation Platform**
   
   [![React](https://img.shields.io/badge/React-19.x-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-3.0-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -28,7 +28,6 @@ AegisRoad is a **full-stack civic-tech platform** for municipal officers, field 
 | Service  | URL |
 |----------|-----|
 | Frontend | http://localhost:3000 |
-| API Docs | http://localhost:8000/docs |
 
 ### Manual Start
 
