@@ -12,7 +12,7 @@
 
 <br />
 
-AegisRoad automates how municipal governments detect road hazards, assign contractors under SLA deadlines, verify repairs with photo evidence, and audit public spend.
+AegisRoad automates how municipal governments detect road hazards, assign contractors with SLA deadlines, verify repairs with photo evidence, and audit public spend.
 
 AegisRoad is a **full-stack civic-tech platform** for municipal officers, field drivers, and contractors — combining **YOLOv8** defect detection, **Claude Sonnet 4** (AegisChat), and role-based dashboards into one command-and-control system.
 
