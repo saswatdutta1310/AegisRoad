@@ -1,0 +1,32 @@
+{
+  "name": "AegisRoad — Road Safety",
+  "short_name": "AegisRoad",
+  "description": "AI-powered road hazard detection and civic accountability platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#4f8ef7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["navigation", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ]
+}

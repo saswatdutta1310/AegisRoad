@@ -1,26 +1,127 @@
-from fastapi import APIRouter
+"""
+AegisRoad v3.0 — AegisChat API
+Uses direct HTTP to Anthropic API (no SDK needed)
+"""
+
+import httpx
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
-import anthropic
-from ..core.config import settings
+from typing import List, Optional
+from app.core.config import settings
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter()
 
-SYSTEM = ("You are AegisChat, the AI assistant for AegisRoad road safety platform. "
-          "Help citizens with road hazard queries, contractor accountability, and reporting. "
-          "Be concise and civic-minded.")
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+
+SYSTEM_PROMPT = """You are AegisChat, the AI assistant for AegisRoad v3.0 — 
+a civic-technology platform for road safety and infrastructure accountability 
+in India and BIMSTEC countries.
+
+You help citizens, government officials, and contractors with:
+1. Road damage reporting (potholes, cracks, surface damage)
+2. Understanding hazard severity levels (D00, D10, D20, D40, D43)
+3. Contractor accountability and SLA tracking
+4. Public road spending transparency
+5. Road safety tips and best practices
+
+Severity guide:
+- D00 Longitudinal Crack → Medium severity
+- D10 Transverse Crack → Medium severity
+- D20 Alligator Crack → High severity
+- D40 Pothole → Critical severity (most dangerous)
+- D43 Surface Damage → Low severity
+
+SLA response times:
+- Critical (D40 Pothole) → Must be fixed within 48 hours
+- High (D20) → 7 days
+- Medium (D00, D10) → 30 days
+- Low (D43) → 90 days
+
+Always respond helpfully and concisely. Keep responses under 200 words."""
+
+
+class Message(BaseModel):
+    role: str
+    content: str
+
 
 class ChatRequest(BaseModel):
     message: str
-    history: List[Dict] = []
+    history: Optional[List[Message]] = []
 
-@router.post("/")
+
+class ChatResponse(BaseModel):
+    reply: str
+    success: bool
+    error: Optional[str] = None
+
+
+DEMO_RESPONSES = [
+    "I'm AegisChat! Potholes (D40) are Critical severity — contractors must fix them within 48 hours under our SLA system. Add an API key to .env to enable full AI responses.",
+    "AegisRoad uses YOLOv8-Nano trained on 26,869 road images from 6 countries including India, detecting 5 damage types with up to 75% pothole accuracy.",
+    "SpendWatch tracks contractor performance in real time — ranked by SLA compliance, repair quality, and response time for full public accountability.",
+]
+demo_counter = 0
+
+
+async def call_claude(user_message: str, history: List[Message]) -> str:
+    messages = []
+    for msg in history[-10:]:
+        messages.append({
+            "role": "user" if msg.role == "user" else "assistant",
+            "content": msg.content
+        })
+    messages.append({"role": "user", "content": user_message})
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            ANTHROPIC_URL,
+            headers={
+                "x-api-key": settings.ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-haiku-4-5",
+                "max_tokens": 512,
+                "system": SYSTEM_PROMPT,
+                "messages": messages,
+            }
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Anthropic API error: {response.text}"
+        )
+
+    data = response.json()
+    return data["content"][0]["text"]
+
+
+@router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
+    global demo_counter
+
+    if not settings.ANTHROPIC_API_KEY:
+        reply = DEMO_RESPONSES[demo_counter % len(DEMO_RESPONSES)]
+        demo_counter += 1
+        return ChatResponse(reply=reply, success=True,
+                            error="Demo mode — add ANTHROPIC_API_KEY to .env")
+
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        msgs = [m for m in req.history if m.get("role") in ("user","assistant")]
-        msgs.append({"role":"user","content":req.message})
-        res = client.messages.create(model="claude-sonnet-4-20250514",max_tokens=1000,system=SYSTEM,messages=msgs)
-        return {"reply": res.content[0].text}
+        reply = await call_claude(req.message, req.history or [])
+        return ChatResponse(reply=reply, success=True)
+
+    except HTTPException as e:
+        return ChatResponse(
+            reply="Sorry, I'm having trouble connecting. Please try again.",
+            success=False,
+            error=str(e.detail)
+        )
     except Exception as e:
-        return {"reply": f"Service unavailable: {e}"}
+        return ChatResponse(
+            reply="An unexpected error occurred. Please try again.",
+            success=False,
+            error=str(e)
+        )

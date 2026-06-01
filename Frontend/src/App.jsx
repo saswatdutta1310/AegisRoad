@@ -17,6 +17,7 @@ import LandingPage from './components/LandingPage';
 import AuthSystem from './components/AuthSystem';
 import EdgeAI from './components/EdgeAI';
 import CitizenReport from './components/CitizenReport';
+import DriveModeButton from './components/DriveMode/DriveModeButton'; // ← NEW
 import { HazardProvider, useHazards } from './context/HazardContext';
 import { SpendProvider, useSpend } from './context/SpendContext';
 
@@ -24,7 +25,7 @@ function AppShell() {
   const { hazards, addHazard, modifyHazard } = useHazards();
   const { contractors } = useSpend();
   
-  const [activeTab, setActiveTab] = useState('landing'); // 'landing', 'command', 'spend', 'explorer', 'driver', 'contractor', 'edgeai'
+  const [activeTab, setActiveTab] = useState('landing');
   
   // Auth State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -39,7 +40,6 @@ function AppShell() {
 
   const handleLogin = (user) => {
     setCurrentUser(user);
-    // Auto-navigate to the role's default portal
     if (user.role === 'government') setActiveTab('command');
     else if (user.role === 'contractor') setActiveTab('contractor');
     else if (user.role === 'worker') setActiveTab('driver');
@@ -56,11 +56,9 @@ function AppShell() {
     } catch (e) {}
   };
   
-  // Master reactive states for non-API data
   const [contracts, setContracts] = useState(INITIAL_CONTRACTS);
   const [slaBreaches, setSlaBreaches] = useState(INITIAL_SLA_BREACHES);
 
-  // Trigger to append a newly reported hazard
   const handleReportHazard = (newHazard) => {
     addHazard({
       ...newHazard, 
@@ -71,12 +69,10 @@ function AppShell() {
     });
   };
 
-  // Trigger to update attributes on an existing hazard
   const handleModifyHazard = (id, updates) => {
     modifyHazard(id, updates);
   };
 
-  // Action on SLA breach list
   const handleUpdateSLABreach = (id, action) => {
     if (action === 'escalate') {
       setSlaBreaches(prev => prev.map(item => {
@@ -90,7 +86,6 @@ function AppShell() {
         return item;
       }));
     } else if (action === 're-assign') {
-      // Log re-assign bypass trigger
       setSlaBreaches(prev => prev.map(item => {
         if (item.id === id) {
           return {
@@ -125,7 +120,6 @@ function AppShell() {
               </div>
             </div>
 
-            {/* Quick Guest Indicator for screen visibility */}
             <div className="lg:hidden text-xs">
               {currentUser ? (
                 <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-2 py-1 rounded">
@@ -138,9 +132,10 @@ function AppShell() {
             </div>
           </div>
 
-          {/* Left Aligned Tab Selection navigation bar */}
+          {/* Nav + Auth row */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
             <nav className="flex flex-wrap bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/60 gap-0.5 w-full sm:w-auto justify-center">
+              
               <button
                 id="nav-tab-landing"
                 onClick={() => setActiveTab('landing')}
@@ -184,7 +179,6 @@ function AppShell() {
                         <Coins size={11} />
                         Spend Watch
                       </button>
-
                     </>
                   )}
 
@@ -259,15 +253,19 @@ function AppShell() {
                   Contractor Portal
                 </button>
               )}
+
+              {/* ── DRIVE MODE BUTTON ── always visible in navbar ── */}
+              <DriveModeButton hazards={hazards} />
+
             </nav>
 
-            {/* UNIFIED AUTHENTICATION LEDGER SESSION */}
+            {/* Auth section */}
             <div className="shrink-0 flex items-center gap-2 pl-2 border-t sm:border-t-0 sm:border-l border-slate-800/80 pt-2 sm:pt-0 w-full sm:w-auto justify-center">
               {currentUser ? (
                 <div className="flex items-center gap-2">
                   <div className={`px-2 py-1 rounded text-[9px] font-mono font-bold border flex items-center gap-1 ${
                     currentUser.role === 'contractor' 
-                      ? 'bg-green-950/80 text-emerald-400 border-emerald-920 border-emerald-900' 
+                      ? 'bg-green-950/80 text-emerald-400 border-emerald-900' 
                       : currentUser.role === 'government' 
                         ? 'bg-sky-950/80 text-sky-400 border-sky-900' 
                         : 'bg-amber-950/80 text-amber-400 border-amber-900'
@@ -284,7 +282,7 @@ function AppShell() {
                   <button 
                     onClick={handleLogout}
                     className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 transition-all cursor-pointer"
-                    title="Sign Out Core Identity Session"
+                    title="Sign Out"
                   >
                     <LogOut size={11} />
                   </button>
@@ -310,7 +308,7 @@ function AppShell() {
         </div>
       </header>
 
-      {/* Main Container Content */}
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'landing' && (
           <LandingPage 
@@ -392,21 +390,21 @@ function AppShell() {
         )}
       </main>
 
-      {/* Footer copyright segment */}
+      {/* Footer */}
       <footer className="bg-[#070b18] border-t border-slate-900 py-5 mt-10">
         <div className="max-w-7xl mx-auto px-4 text-center text-slate-600 text-xs font-mono">
           <p>© 2026 AegisRoad Intelligence Inc. Bound under municipal road safety & spend audit provisions.</p>
         </div>
       </footer>
 
-      {/* Auth System Modal Dialog */}
+      {/* Auth Modal */}
       <AuthSystem 
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onLogin={handleLogin}
       />
 
-      {/* Floating conversational chatbot */}
+      {/* Floating chatbot */}
       <AegisChat 
         hazards={hazards} 
         contracts={contracts} 
