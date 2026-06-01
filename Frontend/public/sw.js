@@ -23,7 +23,7 @@ self.addEventListener('activate', event => {
   self.clients.claim()
 })
 
-// Fetch — serve from cache when offline
+// Fetch — network first, fallback to cache
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return
   event.respondWith(
@@ -41,14 +41,14 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   const data = event.data?.json() || {}
   event.waitUntil(
-    self.registration.showNotification(data.title || '⚠️ AegisRoad Alert', {
-      body: data.body || 'Hazard detected ahead',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
-      tag: 'hazard-alert',
+    self.registration.showNotification(data.title || '⚠️ AegisRoad Hazard Alert', {
+      body:             data.body || 'Road hazard detected ahead — slow down',
+      icon:             '/icon-192.png',
+      badge:            '/icon-192.png',
+      vibrate:          [200, 100, 200, 100, 200],
+      tag:              'hazard-alert',
       requireInteraction: true,
-      data: { url: data.url || '/' }
+      data:             { url: data.url || '/' }
     })
   )
 })

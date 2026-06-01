@@ -3,6 +3,7 @@
   "short_name": "AegisRoad",
   "description": "AI-powered road hazard detection and civic accountability platform",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f1117",
   "theme_color": "#4f8ef7",
@@ -22,11 +23,16 @@
     }
   ],
   "categories": ["navigation", "utilities"],
-  "screenshots": [
+  "shortcuts": [
     {
-      "src": "/screenshot.png",
-      "sizes": "1280x720",
-      "type": "image/png"
+      "name": "Report Hazard",
+      "url": "/?tab=report",
+      "description": "Quickly report a road hazard"
+    },
+    {
+      "name": "Drive Mode",
+      "url": "/?drive=true",
+      "description": "Start Drive Mode with alerts"
     }
   ]
 }
