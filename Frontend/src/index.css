@@ -65,7 +65,7 @@
   animation: fadeIn 0.4s ease-out;
 }
 
-/* Leaflet map containment — prevents bleed-out and modal overlap */
+/* Leaflet map containment */
 .aegis-map-root {
   position: relative;
   width: 100%;
@@ -100,4 +100,3 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
 }
-
