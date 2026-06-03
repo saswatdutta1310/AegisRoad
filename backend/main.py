@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import hazards, contractors, predict, chat, auth
+from app.api.proof import router as proof_router          # ← NEW
 from app.core.database import engine, SessionLocal
 from app.models import Base, Hazard
 
@@ -34,6 +35,7 @@ app.include_router(hazards.router,     prefix="/api")
 app.include_router(contractors.router, prefix="/api")
 app.include_router(predict.router,     prefix="/api")
 app.include_router(chat.router,        prefix="/api")
+app.include_router(proof_router)                          # ← NEW (prefix /api/v1/proof built-in)
 
 @app.get("/")
 def root():

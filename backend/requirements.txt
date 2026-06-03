@@ -10,3 +10,6 @@ python-dotenv
 httpx
 passlib[bcrypt]
 PyJWT
+web3>=7.0.0
+asyncpg
+sqlalchemy[asyncio]

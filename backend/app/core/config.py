@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
+    # Avalanche Fuji — Proof of Repair blockchain
+    AVALANCHE_RPC_URL: str = "https://api.avax-test.network/ext/bc/C/rpc"
+    CONTRACT_ADDRESS: str = ""
+    PRIVATE_KEY: str = ""
+    CONTRACT_ABI: str = "[]"
+
     class Config:
         env_file = ".env"
 
