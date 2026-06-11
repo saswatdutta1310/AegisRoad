@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
 } from 'recharts';
@@ -6,6 +7,10 @@ import {
   Search, ArrowDownRight, ArrowUpRight, Award, ShieldAlert, 
   Coins, Filter, ChevronRight, HelpCircle, FileSpreadsheet, Building 
 } from 'lucide-react';
+
+// ── Backend base URL ───────────────────────────────────────────────────────────
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function SpendWatch({
   contracts = [],
   contractors = [],
@@ -14,6 +19,7 @@ export default function SpendWatch({
   const [selectedContract, setSelectedContract] = useState(contracts[0] || null);
   const [sectorFilter, setSectorFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);  // ← loading state for button
 
   // Total municipal financial calculations
   const totalAllocated = contracts.reduce((sum, c) => sum + c.budgetAllocated, 0);
@@ -42,6 +48,53 @@ export default function SpendWatch({
   // Ranked contractors ledger by efficiency scale
   const rankedContractors = [...contractors].sort((a, b) => b.successRate - a.successRate);
 
+
+  // ── EXPORT AUDIT handler ───────────────────────────────────────────────────
+  const handleExportAudit = async () => {
+    setExportLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE}/api/v1/spend/export`, {
+        responseType: 'blob',           // treat response as binary file stream
+      });
+
+      // Create an in-memory object URL from the blob
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], { type: 'text/csv' })
+      );
+
+      // Inject a hidden <a> tag, click it to trigger download, then remove it
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'aegisroad_contracts_audit.csv');
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up — revoke the object URL and remove the link element
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      // Backend may be sleeping (Render cold start) or unreachable
+      if (error.response) {
+        // Server replied with a non-2xx status
+        console.error('Export failed — server error:', error.response.status, error.response.data);
+        alert(`Export failed: server returned ${error.response.status}. Please try again.`);
+      } else if (error.request) {
+        // Request was made but no response received (backend asleep / network issue)
+        console.error('Export failed — no response from backend. Is the server awake?', error.request);
+        alert('Export failed: backend is unreachable or still waking up. Please wait 30 seconds and try again.');
+      } else {
+        // Something went wrong setting up the request
+        console.error('Export failed — unexpected error:', error.message);
+        alert(`Export failed: ${error.message}`);
+      }
+    } finally {
+      setExportLoading(false);
+    }
+  };
+  // ── end EXPORT AUDIT handler ───────────────────────────────────────────────
+
+
   return (
     <div className="space-y-6 font-sans">
       {/* Visual Header */}
@@ -61,13 +114,16 @@ export default function SpendWatch({
             Citizen audit tool tracking public tenders, milestone disbursements, and taxpayer efficiency indexes.
           </p>
         </div>
+
         <div className="flex gap-2">
-          <button 
-            onClick={() => window.print()}
-            className="cursor-pointer bg-slate-800 text-slate-200 hover:text-white border border-slate-755 hover:border-slate-600 text-xs font-bold px-3 py-2 rounded flex items-center gap-1.5 transition-colors font-mono uppercase"
+          {/* ── FIXED: was window.print(), now calls live backend CSV export ── */}
+          <button
+            onClick={handleExportAudit}
+            disabled={exportLoading}
+            className="cursor-pointer bg-slate-800 text-slate-200 hover:text-white border border-slate-755 hover:border-slate-600 text-xs font-bold px-3 py-2 rounded flex items-center gap-1.5 transition-colors font-mono uppercase disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileSpreadsheet size={13} />
-            Export Audit
+            {exportLoading ? 'Exporting...' : 'Export Audit'}
           </button>
         </div>
       </div>

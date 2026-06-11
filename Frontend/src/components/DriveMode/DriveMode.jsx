@@ -1,8 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-// ── Constants ────────────────────────────────────────────────────────────────
-const ALERT_RADIUS_M = 500
+// ── Load alert preferences set in AlertSettings ──────────────────────────────
+const DEFAULT_ALERT_PREFS = {
+  visualAlerts: true,
+  popupNotification: true,
+  screenFlash: false,
+  voiceAlerts: true,
+  voiceMessage: 'speed-camera',
+  customVoiceText: '',
+  vibrationAlerts: true,
+  alertDistance: 400,
+  reminderFrequency: 'once',
+}
+function loadAlertPrefs() {
+  try {
+    const saved = localStorage.getItem('aegis_alert_settings')
+    return saved ? { ...DEFAULT_ALERT_PREFS, ...JSON.parse(saved) } : { ...DEFAULT_ALERT_PREFS }
+  } catch { return { ...DEFAULT_ALERT_PREFS } }
+}
 
+// ── Constants ────────────────────────────────────────────────────────────────
 const HAZARDS = [
   { id:1, lat:16.5417, lng:80.5152, cls:'D40', severity:'critical', road:'NH-16, Vijayawada', contractor:'Ramesh Road Works' },
   { id:2, lat:16.3067, lng:80.4365, cls:'D20', severity:'high',     road:'SH-47, Guntur',    contractor:'AP Infrastructure Ltd' },
@@ -136,7 +153,7 @@ class VoiceEngine {
     } catch (_) {}
   }
 
-  async speak(eng, hin) {
+  async speak(engText, localText, localLang = 'hi-IN') {
     // Always beep first — works even when speech is blocked
     this._beep(880, 0.18)
     await new Promise(r => setTimeout(r, 250))
@@ -172,14 +189,39 @@ class VoiceEngine {
       }
     })
 
-    await say(eng, 'en-IN')
-    await new Promise(r => setTimeout(r, 350))
-    await say(hin, 'hi-IN')
+    // English always comes first
+    await say(engText, 'en-IN')
+
+    // Only speak the local translation if a different language is chosen
+    if (localLang && localLang !== 'en-IN' && localText) {
+      await new Promise(r => setTimeout(r, 350))
+      await say(localText, localLang)
+    }
   }
 }
 
 // Singleton so we don't recreate AudioContext repeatedly
 const voice = new VoiceEngine()
+
+// ── BIMSTEC hazard-alert translations ────────────────────────────────────────
+// Keys map to BCP-47 lang codes stored in alertPrefs.voiceLanguage.
+// Each entry is a function(distM, clsLabel) → translated alert string.
+const BIMSTEC_TRANSLATIONS = {
+  'en-IN': (d, cls) => `Road damage ahead. ${cls} detected ${d} metres ahead. Reduce speed and stay alert.`,
+  'hi-IN': (d, cls) => `चेतावनी! आगे ${d} मीटर पर ${cls} है। कृपया गति धीमी करें।`,
+  'bn-BD': (d, cls) => `সাবধান! সামনে ${d} মিটারে ${cls} রয়েছে। গতি কমান।`,
+  'my-MM': (d, cls) => `သတိပေးချက်! ${d} မီတာအကွာတွင် ${cls} ရှိသည်။ အမြန်နှုန်းလျှော့ချပါ။`,
+  'ne-NP': (d, cls) => `सावधान! अगाडि ${d} मिटरमा ${cls} छ। गति घटाउनुहोस्।`,
+  'si-LK': (d, cls) => `අවවාදයයි! ඉදිරියේ ${d} මීටර් දුරින් ${cls} ඇත. වේගය අඩු කරන්න.`,
+  'ta-IN': (d, cls) => `எச்சரிக்கை! முன்னே ${d} மீட்டர் தூரத்தில் ${cls} உள்ளது. வேகத்தை குறைக்கவும்.`,
+  'th-TH': (d, cls) => `คำเตือน! มี${cls}อยู่ข้างหน้า ${d} เมตร กรุณาลดความเร็ว`,
+  'dz-BT': (d, cls) => `ཞིབ་འཚོལ། ${d} སྨི་ལས་གདོང་ལྔ་ཁར་ ${cls} འདུག ཤུགས་ཆུང་ངུ་བཏང་།`,
+}
+
+// cls code → human-readable label used in translations
+function clsLabel(cls) {
+  return cls === 'D40' ? 'pothole' : cls === 'D20' ? 'road crack' : cls === 'D10' ? 'waterlogging' : 'road damage'
+}
 
 // ── PWA Install Banner ───────────────────────────────────────────────────────
 function InstallBanner({ onDismiss }) {
@@ -457,26 +499,45 @@ export default function DriveMode({ onClose }) {
   const [voiceReady,    setVoiceReady]  = useState(false)
   const [showInstall,   setShowInstall] = useState(true)
   const [testingVoice,  setTestingVoice]= useState(false)
+  // Load alert preferences from AlertSettings
+  const [alertPrefs,    setAlertPrefs]  = useState(loadAlertPrefs)
+  // Re-read prefs every time modal opens (in case user changed settings)
+  useEffect(() => { setAlertPrefs(loadAlertPrefs()) }, [])
 
   const watchId    = useRef(null)
   const simTimer   = useRef(null)
   const alertedIds = useRef(new Set())
+  const alertCounts = useRef({})   // tracks how many times each hazard has fired
 
   const addLog = msg =>
     setLog(prev => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev.slice(0,49)])
 
   // ── Voice unlock + test ────────────────────────────────────────────────────
   const unlockAndTestVoice = async () => {
-    voice.unlock()  // Must be called in user-gesture context
+    voice.unlock()
     setVoiceReady(true)
     setTestingVoice(true)
     addLog('🔊 Testing voice alerts...')
     try {
-      await voice.speak(
-        'AegisRoad voice alerts are now active.',
-        'एजिस रोड वॉयस अलर्ट अब सक्रिय हैं।'
-      )
-      addLog('✅ Voice working — EN + हिं')
+      const prefs   = loadAlertPrefs()
+      const lang    = prefs.voiceLanguage || 'hi-IN'
+      const localText = lang !== 'en-IN'
+        ? (BIMSTEC_TRANSLATIONS[lang]?.(0, 'road damage') ?? null)
+        : null
+      // Use a fixed test phrase for English; pick matching local test phrase
+      const localTestPhrases = {
+        'hi-IN': 'एजिस रोड वॉयस अलर्ट अब सक्रिय हैं।',
+        'bn-BD': 'এজিস রোড ভয়েস অ্যালার্ট এখন সক্রিয়।',
+        'my-MM': 'AegisRoad voice alerts များ ဖွင့်ထားပြီ။',
+        'ne-NP': 'एजिस रोड भ्वाइस अलर्ट अब सक्रिय छ।',
+        'si-LK': 'AegisRoad හඬ ඇඟවීම් දැන් ක්‍රියාත්මකයි.',
+        'ta-IN': 'AegisRoad குரல் எச்சரிக்கைகள் இப்போது செயலில் உள்ளன.',
+        'th-TH': 'AegisRoad เปิดใช้งานการแจ้งเตือนด้วยเสียงแล้ว',
+        'dz-BT': 'AegisRoad སྐད་ཀྱི་ཞིབ་འཚོལ་སྦྱོར་བ་ཡོད།',
+      }
+      const testLocal = lang !== 'en-IN' ? (localTestPhrases[lang] ?? null) : null
+      await voice.speak('AegisRoad voice alerts are now active.', testLocal, lang)
+      addLog(`✅ Voice working — EN + ${lang}`)
     } catch (e) {
       addLog('⚠️ Voice unavailable — beep alerts still active')
     } finally {
@@ -484,21 +545,62 @@ export default function DriveMode({ onClose }) {
     }
   }
 
-  // ── Hazard proximity check ─────────────────────────────────────────────────
+  // ── Hazard proximity check (reads alertPrefs) ──────────────────────────────
   const checkPos = useCallback((lat, lng) => {
     if (!routeResult) return
+    const prefs = loadAlertPrefs()   // always fresh from localStorage
+    const maxFires = prefs.reminderFrequency === 'three' ? 3 : prefs.reminderFrequency === 'twice' ? 2 : 1
+
     for (const h of routeResult.hazards) {
-      if (alertedIds.current.has(h.id)) continue
+      const fires = alertCounts.current[h.id] || 0
+      if (fires >= maxFires) continue
+
       const d = distM(lat, lng, h.lat, h.lng)
-      if (d <= ALERT_RADIUS_M) {
-        alertedIds.current.add(h.id)
-        setActiveAlert(h)
+      if (d <= prefs.alertDistance) {
+        alertCounts.current[h.id] = fires + 1
+
+        // ── Visual alert ──────────────────────────────────────────────────────
+        if (prefs.visualAlerts && prefs.popupNotification) {
+          setActiveAlert(h)
+        }
+
+        // ── Screen flash for critical hazards ─────────────────────────────────
+        if (prefs.visualAlerts && prefs.screenFlash && h.severity === 'critical') {
+          document.body.style.transition = 'background 0.1s'
+          document.body.style.background = 'rgba(239,68,68,0.18)'
+          setTimeout(() => { document.body.style.background = '' }, 400)
+        }
+
         addLog(`🚨 ${h.cls} — ${h.road} (${Math.round(d)}m ahead)`)
-        // Voice fires here — already unlocked
-        voice.speak(
-          `Warning! ${h.cls==='D40'?'Critical pothole':'Road damage'} detected ${Math.round(d)} metres ahead on ${h.road}. Please slow down.`,
-          `चेतावनी! आगे ${Math.round(d)} मीटर पर ${h.cls==='D40'?'गड्ढा':'सड़क क्षति'} है। कृपया गति धीमी करें।`
-        )
+
+        // ── Voice alert ───────────────────────────────────────────────────────
+        if (prefs.voiceAlerts) {
+          const dist    = Math.round(d)
+          const label   = clsLabel(h.cls)
+          const lang    = prefs.voiceLanguage || 'hi-IN'
+
+          // English text (always first)
+          let engText
+          if (prefs.voiceMessage === 'slow-down') {
+            engText = `Caution! Unrepaired ${label} on this route, ${dist} metres ahead on ${h.road}.`
+          } else if (prefs.voiceMessage === 'custom' && prefs.customVoiceText) {
+            engText = prefs.customVoiceText
+          } else {
+            engText = `Road damage ahead. ${h.cls === 'D40' ? 'Critical pothole' : h.cls === 'D20' ? 'Road crack' : h.cls === 'D10' ? 'Waterlogging' : 'Road damage'} detected ${dist} metres ahead on ${h.road}. Reduce speed and stay alert.`
+          }
+
+          // Local language text (null when user chose English-only)
+          const localText = lang !== 'en-IN'
+            ? (BIMSTEC_TRANSLATIONS[lang]?.(dist, label) ?? null)
+            : null
+
+          voice.speak(engText, localText, lang)
+        }
+
+        // ── Vibration alert ───────────────────────────────────────────────────
+        if (prefs.vibrationAlerts && 'vibrate' in navigator) {
+          navigator.vibrate(h.severity === 'critical' ? [300, 100, 300, 100, 300] : [200, 100, 200])
+        }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -534,7 +636,7 @@ export default function DriveMode({ onClose }) {
       addLog('⚠️ Enable voice first — tap the 🔊 button above')
       return
     }
-    alertedIds.current.clear(); setActive(true); setActiveAlert(null)
+    alertedIds.current.clear(); alertCounts.current = {}; setActive(true); setActiveAlert(null)
     addLog('🎮 Simulating drive on planned route...')
     const total = routeResult.coords.length
     const step  = Math.max(1, Math.floor(total / 20))
@@ -556,7 +658,7 @@ export default function DriveMode({ onClose }) {
       addLog('⚠️ Enable voice first — tap the 🔊 button above')
       return
     }
-    alertedIds.current.clear(); setActive(true); setActiveAlert(null)
+    alertedIds.current.clear(); alertCounts.current = {}; setActive(true); setActiveAlert(null)
     addLog('📍 Real GPS drive started — move your device...')
     watchId.current = navigator.geolocation.watchPosition(
       pos => {
@@ -679,7 +781,10 @@ export default function DriveMode({ onClose }) {
             display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:12,
           }}>
             <span style={{ color:'#10b981' }}>
-              🔊 Voice alerts active — EN + हिंदी
+              🔊 Voice active — EN
+              {alertPrefs.voiceLanguage && alertPrefs.voiceLanguage !== 'en-IN'
+                ? ` + ${alertPrefs.voiceLanguage.split('-')[0].toUpperCase()}`
+                : ' only'}
             </span>
             <button
               onClick={unlockAndTestVoice}
@@ -690,6 +795,26 @@ export default function DriveMode({ onClose }) {
             </button>
           </div>
         )}
+
+        {/* ── Active Alert Settings Summary ── */}
+        <div style={{
+          background:'#0d1117', border:'1px solid #1e2433', borderRadius:8,
+          padding:'9px 14px', marginBottom:16, fontSize:11, color:'#5a6480',
+          display:'flex', flexWrap:'wrap', gap:'6px 16px',
+        }}>
+          <span>📏 Distance: <strong style={{color:'#dde2ee'}}>{alertPrefs.alertDistance}m</strong></span>
+          <span>🔁 Repeat: <strong style={{color:'#dde2ee'}}>
+            {alertPrefs.reminderFrequency === 'three' ? '3×' : alertPrefs.reminderFrequency === 'twice' ? '2×' : '1×'}
+          </strong></span>
+          <span>🔊 Voice: <strong style={{color: alertPrefs.voiceAlerts ? '#10b981' : '#ef4444'}}>
+            {alertPrefs.voiceAlerts
+              ? `EN${alertPrefs.voiceLanguage && alertPrefs.voiceLanguage !== 'en-IN' ? ` + ${alertPrefs.voiceLanguage.split('-')[0].toUpperCase()}` : ''}`
+              : 'off'}
+          </strong></span>
+          <span>📳 Vibrate: <strong style={{color: alertPrefs.vibrationAlerts ? '#10b981' : '#ef4444'}}>
+            {alertPrefs.vibrationAlerts ? 'on' : 'off'}
+          </strong></span>
+        </div>
 
         {/* ── Tabs ── */}
         <div style={{ display:'flex', gap:8, marginBottom:20 }}>

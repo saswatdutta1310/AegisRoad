@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Building, LayoutDashboard, ShieldCheck, Map, Smartphone, Wrench, 
-  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye, Camera, AlertTriangle
+  Coins, Sparkles, BookOpen, LogIn, LogOut, User, Lock, Eye, Camera, AlertTriangle, Settings
 } from 'lucide-react';
 import { 
   INITIAL_CONTRACTS, 
@@ -17,6 +17,7 @@ import LandingPage from './components/LandingPage';
 import AuthSystem from './components/AuthSystem';
 import EdgeAI from './components/EdgeAI';
 import CitizenReport from './components/CitizenReport';
+import AlertSettings from './components/AlertSettings';
 import DriveModeButton from './components/DriveMode/DriveModeButton'; // ← NEW
 import { HazardProvider, useHazards } from './context/HazardContext';
 import { SpendProvider, useSpend } from './context/SpendContext';
@@ -254,6 +255,21 @@ function AppShell() {
                 </button>
               )}
 
+              {/* ── SETTINGS BUTTON ── */}
+              <button
+                id="nav-tab-settings"
+                onClick={() => setActiveTab('settings')}
+                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-[#2ea014] text-white shadow font-extrabold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Alert Settings"
+              >
+                <Settings size={11} />
+                Settings
+              </button>
+
               {/* ── DRIVE MODE BUTTON ── always visible in navbar ── */}
               <DriveModeButton hazards={hazards} />
 
@@ -366,6 +382,10 @@ function AppShell() {
             currentUser={currentUser}
             onTriggerLogin={() => setIsAuthOpen(true)}
           />
+        )}
+
+        {activeTab === 'settings' && (
+          <AlertSettings onBack={() => setActiveTab('landing')} />
         )}
 
         {activeTab === 'contractor' && (
