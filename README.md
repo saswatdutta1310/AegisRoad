@@ -15,7 +15,7 @@
 
 **AegisRoad automates how municipal governments detect road hazards, dispatch contractors with SLA deadlines, verify repairs with photo evidence, and anchor proof-of-repair immutably on blockchain — all in one command-and-control platform.**
 
-[🌐 Live Demo](https://aegis-road-v3.vercel.app) · [📡 API Docs](https://aegisroad-v3.onrender.com/docs) · [🔗 GitHub](https://github.com/rudrapatel1908/AegisRoad-v3)
+[🌐 Live Demo](https://aegis-road-v3.vercel.app) · [📡 API Docs](https://aegisroad-v3.onrender.com/docs) · [🔗 GitHub](https://github.com/saswatdutta1310/Road_Safety)
 
 </div>
 
@@ -38,8 +38,8 @@ AegisRoad is a **full-stack civic-tech platform** for municipal officers, field 
 ### Option A — One Command (Windows)
 
 ```powershell
-git clone https://github.com/rudrapatel1908/AegisRoad-v3.git
-cd AegisRoad-v3
+git clone https://github.com/saswatdutta1310/Road_Safety
+cd Road_Safety
 .\start-all.ps1
 ```
 
@@ -74,7 +74,7 @@ npm run dev
 ## 🏗️ Project Structure
 
 ```
-AegisRoad-v3/
+Road_Safety/
 │
 ├── Frontend/                          React 18 + Vite PWA
 │   ├── src/
@@ -146,7 +146,7 @@ Click **Login / Sign Up → Quick Login** on the live site or use these credenti
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     AEGISROAD v3.0 WORKFLOW                         │
+│                     Road_Safety WORKFLOW                         │
 ├──────────┬──────────────────────────────────────────────────────────┤
 │ STEP 1   │ DETECTION                                                │
 │          │ Edge AI dashcam upload → YOLOv8 classifies D00–D40      │
