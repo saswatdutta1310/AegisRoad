@@ -19,49 +19,11 @@
 
 </div>
 
----
+<br />
 
-## 📋 Table of Contents
+AegisRoad automates how municipal governments detect road hazards, assign contractors with SLA deadlines, verify repairs with photo evidence, and audit public spend.
 
-- [What It Does](#-what-it-does)
-- [Key Features](#-key-features)
-- [Quick Start](#-quick-start)
-- [Project Structure](#-project-structure)
-- [Demo Accounts](#-demo-accounts)
-- [End-to-End Workflow](#-end-to-end-workflow)
-- [Module Breakdown](#-module-breakdown)
-- [API Reference](#-api-reference)
-- [Tech Stack](#-tech-stack)
-- [Configuration](#️-configuration)
-- [Blockchain Setup](#-blockchain--proof-of-repair)
-- [PWA Installation](#-pwa--progressive-web-app)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
-
----
-
-## 🎯 What It Does
-
-AegisRoad is a full-stack civic-tech platform that solves three interconnected problems plaguing Indian municipal infrastructure:
-
-| Problem | AegisRoad Solution |
-|---------|-------------------|
-| Road defects go undetected for months | YOLOv8-Nano AI detects D00–D40 damage classes from dashcam images in real time |
-| Contractor accountability is opaque | SpendWatch algorithmic scoring + immutable blockchain audit trail |
-| Citizens have no transparency | Public hazard map + AegisChat AI assistant for instant civic queries |
-
----
-
-## ✨ Key Features
-
-- 🤖 **Edge AI Detection** — YOLOv8-Nano trained on RDD2022 (26,869 images) detects potholes, cracks, and surface damage with live GPS auto-pinning
-- 🗺️ **Live Hazard Map** — Real-time GIS dashboard with proximity alerts and severity filtering
-- 💬 **AegisChat** — Claude Sonnet 4 powered assistant grounded in live hazard data with session persistence
-- 🚗 **Drive Mode** — V2I geofence alerts with bilingual voice warnings (English + Hindi) when approaching hazards
-- 💰 **SpendWatch** — Algorithmic contractor efficiency scoring, budget disbursement tracking, and CSV audit export
-- ⛓️ **Proof of Repair** — SHA-256 hashes anchored immutably on Avalanche Fuji Testnet
-- 📱 **PWA** — Installable on Android and iOS, works offline
-- 🔐 **Role-Based Auth** — Separate portals for Government Officers, Contractors, and Field Workers
+AegisRoad is a **full-stack civic-tech platform** for municipal officers, field drivers, and contractors — combining **YOLOv8** defect detection, **Claude Sonnet 4** (AegisChat), and role-based dashboards into one command-and-control system.
 
 ---
 
