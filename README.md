@@ -15,6 +15,7 @@
 
 **AegisRoad automates how municipal governments detect road hazards, dispatch contractors with SLA deadlines, verify repairs with photo evidence, and anchor proof-of-repair immutably on blockchain — all in one command-and-control platform.**
 
+<<<<<<< HEAD
 [🌐 Live Demo](https://aegis-road-v3.vercel.app) · [📡 API Docs](https://aegisroad-v3.onrender.com/docs) · [🔗 GitHub](https://github.com/rudrapatel1908/AegisRoad-v3)
 
 </div>
@@ -62,6 +63,17 @@ AegisRoad is a full-stack civic-tech platform that solves three interconnected p
 - ⛓️ **Proof of Repair** — SHA-256 hashes anchored immutably on Avalanche Fuji Testnet
 - 📱 **PWA** — Installable on Android and iOS, works offline
 - 🔐 **Role-Based Auth** — Separate portals for Government Officers, Contractors, and Field Workers
+=======
+[🌐 Live Demo](https://aegis-road-v3.vercel.app) · [📡 API Docs](https://aegisroad-v3.onrender.com/docs) · [🔗 GitHub](https://github.com/saswatdutta1310/Road_Safety)
+
+</div>
+
+<br />
+
+AegisRoad automates how municipal governments detect road hazards, assign contractors with SLA deadlines, verify repairs with photo evidence, and audit public spend.
+
+AegisRoad is a **full-stack civic-tech platform** for municipal officers, field drivers, and contractors — combining **YOLOv8** defect detection, **Claude Sonnet 4** (AegisChat), and role-based dashboards into one command-and-control system.
+>>>>>>> 175ea788fd25296c56990c0870c3149af51e4d32
 
 ---
 
@@ -76,8 +88,13 @@ AegisRoad is a full-stack civic-tech platform that solves three interconnected p
 ### Option A — One Command (Windows)
 
 ```powershell
+<<<<<<< HEAD
 git clone https://github.com/rudrapatel1908/AegisRoad-v3.git
 cd AegisRoad-v3
+=======
+git clone https://github.com/saswatdutta1310/Road_Safety
+cd Road_Safety
+>>>>>>> 175ea788fd25296c56990c0870c3149af51e4d32
 .\start-all.ps1
 ```
 
@@ -112,7 +129,11 @@ npm run dev
 ## 🏗️ Project Structure
 
 ```
+<<<<<<< HEAD
 AegisRoad-v3/
+=======
+Road_Safety/
+>>>>>>> 175ea788fd25296c56990c0870c3149af51e4d32
 │
 ├── Frontend/                          React 18 + Vite PWA
 │   ├── src/
@@ -184,7 +205,11 @@ Click **Login / Sign Up → Quick Login** on the live site or use these credenti
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
+<<<<<<< HEAD
 │                     AEGISROAD v3.0 WORKFLOW                         │
+=======
+│                     Road_Safety WORKFLOW                         │
+>>>>>>> 175ea788fd25296c56990c0870c3149af51e4d32
 ├──────────┬──────────────────────────────────────────────────────────┤
 │ STEP 1   │ DETECTION                                                │
 │          │ Edge AI dashcam upload → YOLOv8 classifies D00–D40      │
