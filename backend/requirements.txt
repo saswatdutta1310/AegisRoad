@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic>=2.7
+pydantic-settings
+python-multipart
+pillow
+anthropic
+python-dotenv
+httpx
+passlib[bcrypt]
+PyJWT
+web3>=7.0.0
+asyncpg
+sqlalchemy[asyncio]

@@ -1,0 +1,36 @@
+# ── Environment ──────────────────────────────────────────
+.env
+backend/.env
+Frontend/.env
+
+# ── Python ───────────────────────────────────────────────
+**/__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+.venv/
+venv/
+*.sqlite3
+
+# ── Node ─────────────────────────────────────────────────
+**/node_modules/
+Frontend/dist/
+Frontend/build/
+Frontend/coverage/
+*.log
+npm-debug.log*
+
+# ── Database (regenerated locally) ───────────────────────
+backend/aegisroad.db
+*.db
+
+# ── IDE / Editor ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
