@@ -1,347 +1,212 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Navigation, AlertTriangle, Volume2, Mic, MapPin, CheckCircle2, Upload, FileCheck, Clock, Map, HardHat, Zap
-} from 'lucide-react';
+import { Navigation, AlertTriangle, Volume2, Mic, MapPin, CheckCircle2, Upload, FileCheck, Clock, Map, HardHat, Zap } from 'lucide-react';
 import { toast } from 'react-toastify';
 import InteractiveMap from './InteractiveMap';
 
-export default function DriverMobile({ 
-  hazards = [], 
-  onModifyHazard,
-  onReportHazard,
-  currentUser = null
-}) {
+const T = { teal:'#072E24', tealMid:'#156B52', yellow:'#C8D400', cream:'#F4F0E6', creamDark:'#EAE5D6', textDark:'#0D1E1B' };
+const card = { background:'#FFFFFF', border:'1px solid rgba(13,30,27,0.1)', borderRadius:'16px' };
+
+export default function DriverMobile({ hazards = [], onModifyHazard, onReportHazard, currentUser = null }) {
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [evidenceFiles, setEvidenceFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [speechActive, setSpeechActive] = useState(false);
   const [quickReportLogged, setQuickReportLogged] = useState(false);
-  const [arrivedJobs, setArrivedJobs] = useState({}); // track arrival state per job ID
+  const [arrivedJobs, setArrivedJobs] = useState({});
 
-  // Filter jobs for the worker's firm
   const selectedContractor = currentUser?.orgName || "BuildFast Pvt. Ltd.";
   const activeJobs = hazards.filter(h => h.contractor === selectedContractor);
   const activeJob = activeJobs.find(j => j.id === selectedJobId) || activeJobs[0];
 
-  // Pre-select first job if none selected
   useEffect(() => {
-    if (!selectedJobId && activeJobs.length > 0) {
-      setSelectedJobId(activeJobs[0].id);
-    }
+    if (!selectedJobId && activeJobs.length > 0) setSelectedJobId(activeJobs[0].id);
   }, [activeJobs, selectedJobId]);
 
-  // Handle Arrival Logging
   const handleLogArrival = () => {
     if (!activeJob) return;
-    setArrivedJobs(prev => ({ ...prev, [activeJob.id]: true }));
+    setArrivedJobs(p => ({...p,[activeJob.id]:true}));
     toast.success(`Arrival logged for ${activeJob.id} at ${new Date().toLocaleTimeString()}`);
-    if (activeJob.status === 'unassigned') {
-      onModifyHazard(activeJob.id, { status: 'in-progress', completionPercent: 5 });
-    }
+    if (activeJob.status === 'unassigned') onModifyHazard(activeJob.id,{status:'in-progress',completionPercent:5});
   };
 
-  // Voice Log simulation
   const handleSpeakAlert = () => {
-    setSpeechActive(true);
-    toast.info("Microphone activated. Recording field log...");
-    setTimeout(() => {
-      setSpeechActive(false);
-      toast.success("Voice log transcribed and attached to task.");
-    }, 3000);
+    setSpeechActive(true); toast.info("Microphone activated. Recording field log...");
+    setTimeout(()=>{setSpeechActive(false);toast.success("Voice log transcribed and attached to task.");},3000);
   };
 
-  // Live GPS Quick Report
   const handleQuickReport = () => {
     setQuickReportLogged(true);
-    onReportHazard({
-      title: "Field Worker Quick-Pin: New Obstruction",
-      location: "Worker's Current GPS Trajectory",
-      severity: "medium",
-      reporter: currentUser ? `${currentUser.username} (${currentUser.orgName})` : "Field Unit",
-      status: "unassigned",
-      description: "Field worker dropped a live hazard pin from the mobile terminal.",
-      coordinates: { lat: 16.4357, lng: 80.6281 },
-      contractor: selectedContractor
-    });
+    onReportHazard({ title:"Field Worker Quick-Pin: New Obstruction", location:"Worker's Current GPS Trajectory", severity:"medium", reporter:currentUser?`${currentUser.username} (${currentUser.orgName})`:"Field Unit", status:"unassigned", description:"Field worker dropped a live hazard pin from the mobile terminal.", coordinates:{lat:16.4357,lng:80.6281}, contractor:selectedContractor });
     toast.success("Live Hazard Pin Dropped. Dispatch notified.");
-    setTimeout(() => setQuickReportLogged(false), 4000);
+    setTimeout(()=>setQuickReportLogged(false),4000);
   };
 
-  // Drag and Drop Evidence
-  const handleDrag = (e) => {
-    e.preventDefault(); e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
-    else if (e.type === "dragleave") setDragActive(false);
-  };
-  const handleDrop = (e) => {
-    e.preventDefault(); e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const added = Array.from(e.dataTransfer.files).map(f => f.name);
-      setEvidenceFiles(prev => [...prev, ...added]);
-    }
-  };
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const added = Array.from(e.target.files).map(f => f.name);
-      setEvidenceFiles(prev => [...prev, ...added]);
-    }
-  };
+  const handleDrag = (e) => { e.preventDefault();e.stopPropagation();if(e.type==="dragenter"||e.type==="dragover")setDragActive(true);else if(e.type==="dragleave")setDragActive(false); };
+  const handleDrop = (e) => { e.preventDefault();e.stopPropagation();setDragActive(false);if(e.dataTransfer.files?.[0])setEvidenceFiles(p=>[...p,...Array.from(e.dataTransfer.files).map(f=>f.name)]); };
+  const handleFileChange = (e) => { if(e.target.files?.[0])setEvidenceFiles(p=>[...p,...Array.from(e.target.files).map(f=>f.name)]); };
 
   const handleSubmitProof = (e) => {
     e.preventDefault();
-    if (evidenceFiles.length === 0) return;
+    if (!evidenceFiles.length) return;
     setIsSubmitting(true);
-    
-    setTimeout(() => {
-      onModifyHazard(activeJob.id, { 
-        status: 'completed', 
-        completionPercent: 100,
-        description: `${activeJob.description} [WORKER PROOF SUBMITTED: ${evidenceFiles.join(', ')}]`
-      });
+    setTimeout(()=>{
+      onModifyHazard(activeJob.id,{status:'completed',completionPercent:100,description:`${activeJob.description} [WORKER PROOF SUBMITTED: ${evidenceFiles.join(', ')}]`});
       toast.success("Task marked complete and evidence uploaded!");
-      setEvidenceFiles([]);
-      setIsSubmitting(false);
-    }, 1500);
+      setEvidenceFiles([]);setIsSubmitting(false);
+    },1500);
   };
 
   const isArrived = activeJob && arrivedJobs[activeJob.id];
 
   return (
-    <div id="field-worker-portal" className="space-y-6 font-sans text-slate-100 pb-20 animate-fadeIn">
-      
-      {/* SHIFT & SAFETY HEADER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-5 animate-fadeIn pb-16">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-5 border-b" style={{ borderColor:'rgba(13,30,27,0.12)' }}>
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <HardHat className="text-[#2ea014]" />
-            Field Operations Console
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded" style={{ background:'rgba(21,107,82,0.1)', color:T.tealMid, fontFamily:'monospace' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-ping inline-block mr-1" />FIELD OPERATIONS ACTIVE
+            </span>
+          </div>
+          <h1 className="text-[clamp(24px,3vw,38px)] font-black uppercase leading-tight flex items-center gap-2" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>
+            <HardHat size={28} style={{ color:T.tealMid }} />Field Operations Console
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
-            Logged in: <strong className="text-emerald-400">{currentUser?.username || 'Field Worker'}</strong> | Crew: <strong className="text-white">{selectedContractor}</strong>
+          <p className="text-sm font-mono mt-0.5" style={{ color:'rgba(13,30,27,0.5)' }}>
+            Logged in: <strong style={{ color:T.tealMid }}>{currentUser?.username||'Field Worker'}</strong> | Crew: <strong style={{ color:T.teal }}>{selectedContractor}</strong>
           </p>
         </div>
-        
-        {/* Safety Warnings Banner */}
-        <div className="bg-amber-950/40 border border-amber-500/30 px-4 py-2 rounded-lg flex items-center gap-3">
-          <Zap size={16} className="text-amber-400 animate-pulse" />
+        <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background:'#fef3c7', border:'1px solid #fde68a' }}>
+          <Zap size={16} className="animate-pulse" style={{ color:'#d97706' }} />
           <div className="text-xs">
-            <span className="font-bold text-amber-400 block uppercase tracking-wide">Shift Safety Advisory</span>
-            <span className="text-amber-200/70 font-mono">Weather: Clear • Vis: 10km • Traffic: Moderate</span>
+            <span className="font-black uppercase tracking-wide block" style={{ color:'#d97706' }}>Shift Safety Advisory</span>
+            <span className="font-mono text-[10px]" style={{ color:'rgba(13,30,27,0.55)' }}>Weather: Clear · Vis: 10km · Traffic: Moderate</span>
           </div>
         </div>
       </div>
 
-      {/* SPLIT LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[750px]">
-        
-        {/* LEFT PANEL: INTERACTIVE MAP */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl flex flex-col overflow-hidden h-full shadow-lg relative">
-          <div className="bg-slate-950/80 backdrop-blur border-b border-slate-800 p-3 z-10 flex justify-between items-center">
+      {/* Main Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ minHeight:'720px' }}>
+        {/* LEFT: Map */}
+        <div className="rounded-2xl flex flex-col overflow-hidden" style={{ ...card, padding:0, minHeight:'400px' }}>
+          <div className="flex justify-between items-center px-4 py-3 border-b shrink-0" style={{ background:T.teal, borderColor:'rgba(255,255,255,0.1)' }}>
             <div className="flex items-center gap-2">
-              <Map className="text-sky-400" size={18} />
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Live GPS Radar</span>
+              <Map size={16} style={{ color:T.yellow }} />
+              <span className="text-sm font-black uppercase text-white" style={{ fontFamily:"'Barlow Condensed',sans-serif" }}>Live GPS Radar</span>
             </div>
-            <button
-              onClick={handleQuickReport}
-              disabled={quickReportLogged}
-              className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded flex items-center gap-1.5 transition-all ${
-                quickReportLogged ? 'bg-slate-800 text-emerald-400' : 'bg-rose-600 hover:bg-rose-500 text-white'
-              }`}
-            >
-              <MapPin size={12} />
-              {quickReportLogged ? "PIN DROPPED" : "DROP HAZARD PIN"}
+            <button onClick={handleQuickReport} disabled={quickReportLogged} className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all" style={{ background:quickReportLogged?'rgba(21,107,82,0.2)':'#dc2626', color:quickReportLogged?T.tealMid:'#fff', fontFamily:"'Barlow Condensed',sans-serif" }}>
+              <MapPin size={11}/>{quickReportLogged?"PIN DROPPED":"DROP HAZARD PIN"}
             </button>
           </div>
-          
-          <div className="flex-1 min-h-[280px] w-full relative overflow-hidden">
-            <InteractiveMap
-              className="rounded-none"
-              hazards={activeJobs}
-              selectedHazardId={activeJob?.id}
-              activeView="driver"
-              onSelectHazard={(h) => setSelectedJobId(h.id)}
-            />
-            {/* HUD Overlay */}
-            <div className="absolute bottom-4 left-4 z-[5] bg-slate-950/90 border border-slate-800 p-3 rounded-xl backdrop-blur-sm pointer-events-none">
-              <div className="text-[10px] uppercase font-bold text-slate-500 font-mono">Current Vector</div>
-              <div className="text-xl font-black text-white">42 <span className="text-xs text-slate-400">km/h</span></div>
+          <div className="flex-1 min-h-[280px] relative overflow-hidden">
+            <InteractiveMap className="rounded-none" hazards={activeJobs} selectedHazardId={activeJob?.id} activeView="driver" onSelectHazard={h=>setSelectedJobId(h.id)} />
+            <div className="absolute bottom-4 left-4 z-[5] rounded-xl px-3 py-2 pointer-events-none" style={{ background:'rgba(7,46,36,0.9)', backdropFilter:'blur(8px)' }}>
+              <div className="text-[9px] font-black uppercase tracking-widest" style={{ color:'rgba(200,212,0,0.6)', fontFamily:'monospace' }}>Current Vector</div>
+              <div className="text-2xl font-black text-white" style={{ fontFamily:"'Barlow Condensed',sans-serif" }}>42 <span className="text-xs font-normal" style={{ color:'rgba(255,255,255,0.5)' }}>km/h</span></div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT PANEL: TASK QUEUE & CONSOLE */}
+        {/* RIGHT: Task Queue + Console */}
         <div className="flex flex-col gap-4 h-full">
-          
-          {/* Turn-by-Turn Navigation HUD */}
-          <div className="bg-gradient-to-r from-sky-950/60 via-slate-900 to-slate-900 border border-sky-900/40 rounded-xl p-4 shadow-lg flex-none" style={{ animation: 'navPulse 3s infinite' }}>
-            <div className="flex items-center gap-4">
-              {/* Direction Arrow */}
-              <div className="w-14 h-14 bg-sky-500/20 border-2 border-sky-500/50 rounded-xl flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" className="w-8 h-8 text-sky-400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5M5 12l7-7 7 7" />
-                </svg>
+          {/* Nav HUD */}
+          <div className="rounded-2xl p-4" style={{ background:T.teal, border:'1px solid rgba(255,255,255,0.1)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0" style={{ background:'rgba(200,212,0,0.15)', border:'2px solid rgba(200,212,0,0.4)' }}>
+                <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke={T.yellow} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[9px] font-mono text-sky-500 uppercase tracking-widest font-bold">Next Maneuver</div>
-                <div className="text-lg font-black text-white leading-tight truncate">
-                  {activeJob ? `Head to ${activeJob.location?.split(',')[0] || 'NH65'}` : 'No Active Route'}
+                <div className="text-[9px] font-mono uppercase tracking-widest mb-0.5" style={{ color:'rgba(200,212,0,0.6)' }}>Next Maneuver</div>
+                <div className="text-lg font-black text-white truncate leading-tight" style={{ fontFamily:"'Barlow Condensed',sans-serif" }}>
+                  {activeJob?`Head to ${activeJob.location?.split(',')[0]||'NH65'}`:'No Active Route'}
                 </div>
-                <div className="flex items-center gap-4 mt-1">
-                  <span className="text-[10px] font-mono text-sky-300">
-                    <strong className="text-white text-sm">450m</strong> ahead
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500">•</span>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    ETA: <strong className="text-amber-400">4 min</strong>
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500">•</span>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    Speed: <strong className="text-emerald-400">42 km/h</strong>
-                  </span>
+                <div className="flex items-center gap-3 mt-1 text-[10px] font-mono" style={{ color:'rgba(255,255,255,0.55)' }}>
+                  <span><strong className="text-white text-xs">450m</strong> ahead</span>
+                  <span>ETA: <strong style={{ color:T.yellow }}>4 min</strong></span>
+                  <span>Speed: <strong style={{ color:'#7fd4b8' }}>42 km/h</strong></span>
                 </div>
               </div>
-              {/* Route progress mini-bar */}
               <div className="shrink-0 text-center">
-                <div className="text-[9px] font-mono text-slate-500 uppercase">Route</div>
-                <div className="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
-                  <div className="bg-sky-500 h-full rounded-full" style={{ width: '35%' }}></div>
-                </div>
-                <div className="text-[9px] font-mono text-sky-400 font-bold mt-0.5">35%</div>
+                <div className="text-[8px] font-mono uppercase" style={{ color:'rgba(255,255,255,0.4)' }}>Route</div>
+                <div className="w-16 h-1.5 rounded-full overflow-hidden mt-1" style={{ background:'rgba(255,255,255,0.1)' }}><div className="h-full rounded-full" style={{ width:'35%', background:T.yellow }}/></div>
+                <div className="text-[9px] font-mono font-bold mt-0.5" style={{ color:T.yellow }}>35%</div>
               </div>
             </div>
           </div>
 
-          {/* Top Half: Task Queue */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-lg flex-1 overflow-hidden">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 flex justify-between items-center pb-2 border-b border-slate-800">
-              <span>My Assigned Dispatch Queue</span>
-              <span className="bg-slate-800 text-emerald-400 px-2 py-0.5 rounded-full">{activeJobs.length} Tasks</span>
-            </h3>
-            
-            <div className="overflow-y-auto pr-2 space-y-2 flex-1">
+          {/* Task Queue */}
+          <div className="rounded-2xl p-4 flex flex-col flex-1 overflow-hidden" style={card}>
+            <div className="flex justify-between items-center pb-2 mb-3 border-b" style={{ borderColor:'rgba(13,30,27,0.08)' }}>
+              <h3 className="text-sm font-black uppercase tracking-wider" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>My Assigned Dispatch Queue</h3>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded" style={{ background:T.teal, color:T.yellow, fontFamily:'monospace' }}>{activeJobs.length} Tasks</span>
+            </div>
+            <div className="overflow-y-auto space-y-2 flex-1 pr-1">
               {activeJobs.map(job => (
-                <button
-                  key={job.id}
-                  onClick={() => setSelectedJobId(job.id)}
-                  className={`w-full text-left p-3 rounded-lg border transition-all flex flex-col gap-2 ${
-                    job.id === activeJob?.id 
-                      ? 'bg-slate-950 border-emerald-500/50 ring-1 ring-emerald-500/20' 
-                      : 'bg-slate-950/50 border-slate-800 hover:bg-slate-900'
-                  }`}
-                >
-                  <div className="flex justify-between items-start text-[10px]">
-                    <span className="text-slate-400 font-mono font-bold">{job.id}</span>
-                    <span className={`font-black uppercase tracking-wide ${
-                      job.status === 'completed' ? 'text-emerald-400' : 'text-amber-400'
-                    }`}>{job.status}</span>
+                <button key={job.id} onClick={()=>setSelectedJobId(job.id)} className="w-full text-left p-3 rounded-xl transition-all flex flex-col gap-1.5 cursor-pointer border" style={{ background:job.id===activeJob?.id?T.teal:T.creamDark, borderColor:job.id===activeJob?.id?T.teal:'rgba(13,30,27,0.08)' }}>
+                  <div className="flex justify-between text-[9px] font-mono">
+                    <span className="font-black" style={{ color:job.id===activeJob?.id?'rgba(200,212,0,0.7)':'rgba(13,30,27,0.4)' }}>{job.id}</span>
+                    <span className="font-black uppercase" style={{ color:job.status==='completed'?T.tealMid:job.id===activeJob?.id?T.yellow:'#d97706' }}>{job.status}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white truncate">{job.title}</h4>
-                    <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                      <Navigation size={10} /> {job.location}
-                    </p>
-                  </div>
+                  <h4 className="text-xs font-black truncate" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:job.id===activeJob?.id?'#fff':T.teal }}>{job.title}</h4>
+                  <p className="text-[10px] truncate flex items-center gap-1" style={{ color:job.id===activeJob?.id?'rgba(255,255,255,0.55)':'rgba(13,30,27,0.45)' }}>
+                    <Navigation size={9}/>{job.location}
+                  </p>
                 </button>
               ))}
-              {activeJobs.length === 0 && (
-                <div className="text-center text-slate-500 text-xs font-mono py-10">No tasks currently assigned to your crew.</div>
-              )}
+              {activeJobs.length===0 && <div className="text-center py-10 text-sm" style={{ color:'rgba(13,30,27,0.35)', fontFamily:'monospace' }}>No tasks assigned to your crew.</div>}
             </div>
           </div>
 
-          {/* Bottom Half: Execution Console */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex-none h-[400px] flex flex-col justify-between">
+          {/* Execution Console */}
+          <div className="rounded-2xl p-5 flex-none" style={{ ...card, minHeight:'360px', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
             {activeJob ? (
               <>
                 <div>
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-[10px] text-emerald-500 font-mono font-bold uppercase tracking-wider">Active Execution Console</span>
-                    {activeJob.status === 'completed' && (
-                      <span className="bg-emerald-950 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold border border-emerald-900">RESOLVED</span>
-                    )}
+                    <span className="text-[9px] font-black uppercase tracking-widest font-mono" style={{ color:T.tealMid }}>Active Execution Console</span>
+                    {activeJob.status==='completed'&&<span className="text-[9px] font-black uppercase px-2 py-0.5 rounded" style={{ background:'rgba(21,107,82,0.1)', color:T.tealMid }}>RESOLVED</span>}
                   </div>
-                  <h2 className="text-xl font-black text-white">{activeJob.title}</h2>
-                  <p className="text-xs text-slate-400 font-mono">{activeJob.description}</p>
+                  <h2 className="text-xl font-black uppercase mb-1" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>{activeJob.title}</h2>
+                  <p className="text-xs" style={{ color:'rgba(13,30,27,0.5)' }}>{activeJob.description}</p>
                 </div>
-
-                {activeJob.status !== 'completed' ? (
-                  <div className="space-y-4">
-                    {/* Action Buttons */}
+                {activeJob.status!=='completed' ? (
+                  <div className="space-y-4 mt-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        onClick={handleLogArrival}
-                        disabled={isArrived}
-                        className={`py-3 rounded-lg flex flex-col items-center justify-center gap-1 border transition-all ${
-                          isArrived ? 'bg-emerald-950 border-emerald-900 text-emerald-500' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:border-slate-600'
-                        }`}
-                      >
-                        <MapPin size={18} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{isArrived ? 'Arrival Logged' : 'Log Arrival On-Site'}</span>
+                      <button onClick={handleLogArrival} disabled={isArrived} className="py-3 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer border" style={{ background:isArrived?'rgba(21,107,82,0.1)':'transparent', borderColor:isArrived?T.tealMid:'rgba(13,30,27,0.15)', color:isArrived?T.tealMid:T.teal }}>
+                        <MapPin size={18}/><span className="text-[10px] font-black uppercase">{isArrived?'Arrival Logged':'Log Arrival'}</span>
                       </button>
-                      
-                      <button 
-                        onClick={handleSpeakAlert}
-                        className={`py-3 rounded-lg flex flex-col items-center justify-center gap-1 border transition-all ${
-                          speechActive ? 'bg-rose-900 border-rose-700 text-rose-300 animate-pulse' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:border-slate-600'
-                        }`}
-                      >
-                        <Mic size={18} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{speechActive ? 'Recording...' : 'Voice Log Report'}</span>
+                      <button onClick={handleSpeakAlert} className={`py-3 rounded-xl flex flex-col items-center gap-1 transition-all cursor-pointer border ${speechActive?'animate-pulse':''}`} style={{ background:speechActive?'#fee2e2':'transparent', borderColor:speechActive?'#dc2626':'rgba(13,30,27,0.15)', color:speechActive?'#dc2626':T.teal }}>
+                        <Mic size={18}/><span className="text-[10px] font-black uppercase">{speechActive?'Recording...':'Voice Log'}</span>
                       </button>
                     </div>
-
-                    {/* Proof Upload (Only enabled if arrived) */}
-                    <div className={!isArrived ? 'opacity-40 pointer-events-none transition-opacity' : 'transition-opacity'}>
-                      <form onSubmit={handleSubmitProof} className="space-y-3 pt-2 border-t border-slate-800">
-                        <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                          Finalize: Upload Evidence Proof
+                    <div className={`space-y-3 pt-3 border-t transition-opacity ${!isArrived?'opacity-40 pointer-events-none':''}`} style={{ borderColor:'rgba(13,30,27,0.08)' }}>
+                      <label className="text-[9px] font-black uppercase tracking-wider block" style={{ color:'rgba(13,30,27,0.45)', fontFamily:'monospace' }}>Upload Evidence Proof</label>
+                      <div onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop} className="rounded-xl p-4 text-center cursor-pointer border-2 border-dashed transition-all flex flex-col items-center gap-1.5" style={{ borderColor:dragActive?T.teal:'rgba(13,30,27,0.15)', background:dragActive?'rgba(7,46,36,0.04)':T.creamDark }}>
+                        <input type="file" id="worker-evidence" multiple onChange={handleFileChange} className="hidden" />
+                        <label htmlFor="worker-evidence" className="w-full flex flex-col items-center cursor-pointer">
+                          <Upload size={22} style={{ color:T.tealMid }} className="mb-1"/><span className="text-xs font-bold" style={{ color:T.teal }}>Tap to snap or <strong style={{ color:T.tealMid }}>upload file</strong></span>
                         </label>
-                        <div 
-                          onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
-                          className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors flex flex-col items-center justify-center gap-1 ${
-                            dragActive ? 'border-emerald-500 bg-emerald-950/20 cursor-pointer' : 'border-slate-700 bg-slate-950/50 hover:border-slate-600 cursor-pointer'
-                          }`}
-                        >
-                          <input type="file" id="worker-evidence" multiple onChange={handleFileChange} className="hidden" />
-                          <label htmlFor="worker-evidence" className="w-full h-full flex flex-col items-center cursor-pointer text-xs">
-                            <Upload size={20} className="text-emerald-500 mb-1" />
-                            <span className="text-slate-300">Tap to snap a photo or <strong className="text-emerald-400">upload file</strong></span>
-                          </label>
-                        </div>
-                        {evidenceFiles.length > 0 && (
-                          <div className="text-[10px] font-mono text-emerald-400 bg-emerald-950/30 p-1.5 rounded truncate">
-                            Attached: {evidenceFiles.join(', ')}
-                          </div>
-                        )}
-                        <button 
-                          type="submit" 
-                          disabled={evidenceFiles.length === 0 || isSubmitting}
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold py-2.5 rounded text-xs tracking-wider transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          {isSubmitting ? <><Clock size={14} className="animate-spin" /> UPLOADING...</> : <><FileCheck size={14} /> MARK TASK AS RESOLVED</>}
-                        </button>
-                      </form>
+                      </div>
+                      {evidenceFiles.length>0 && <p className="text-[10px] font-mono font-bold truncate" style={{ color:T.tealMid }}>Attached: {evidenceFiles.join(', ')}</p>}
+                      <button type="button" onClick={handleSubmitProof} disabled={evidenceFiles.length===0||isSubmitting} className="w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01]" style={{ background:T.teal, color:T.yellow, fontFamily:"'Barlow Condensed',sans-serif" }}>
+                        {isSubmitting?<><Clock size={14} className="animate-spin"/>UPLOADING...</>:<><FileCheck size={14}/>Mark Task as Resolved</>}
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full space-y-3 bg-emerald-950/20 border border-emerald-900/50 rounded-xl">
-                    <CheckCircle2 size={48} className="text-emerald-500" />
+                  <div className="flex flex-col items-center justify-center flex-1 mt-4 space-y-3 rounded-2xl" style={{ background:'rgba(21,107,82,0.06)', border:'1px solid rgba(21,107,82,0.15)' }}>
+                    <CheckCircle2 size={44} style={{ color:T.tealMid }}/>
                     <div className="text-center">
-                      <div className="text-sm font-bold text-white uppercase tracking-widest">Task Completed</div>
-                      <div className="text-[10px] font-mono text-emerald-400/80 mt-1">Audit log securely filed to ledger.</div>
+                      <div className="text-sm font-black uppercase" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>Task Completed</div>
+                      <div className="text-[10px] font-mono mt-1" style={{ color:'rgba(13,30,27,0.45)' }}>Audit log securely filed to ledger.</div>
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-500 text-xs font-mono">
-                Select a task from the queue to open the console.
-              </div>
+              <div className="flex items-center justify-center h-40 text-sm font-mono" style={{ color:'rgba(13,30,27,0.35)' }}>Select a task from the queue.</div>
             )}
           </div>
-          
         </div>
       </div>
     </div>

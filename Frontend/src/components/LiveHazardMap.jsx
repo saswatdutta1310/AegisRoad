@@ -161,15 +161,15 @@ function MapSearchBar({ onSelect }) {
           style={{
             width:'100%', boxSizing:'border-box',
             padding:'11px 42px 11px 16px',
-            background:'rgba(15,17,23,0.95)', backdropFilter:'blur(12px)',
-            border:'1px solid rgba(79,142,247,0.4)', borderRadius:10,
-            color:'#dde2ee', fontSize:14, outline:'none',
-            boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
+            background:'rgba(7,46,36,0.9)', backdropFilter:'blur(12px)',
+            border:'1px solid rgba(200,212,0,0.35)', borderRadius:12,
+            color:'#fff', fontSize:14, outline:'none',
+            boxShadow:'0 4px 20px rgba(0,0,0,0.3)',
           }}
         />
         <div style={{
           position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
-          color: loading ? '#4f8ef7' : '#5a6480', fontSize:15, pointerEvents:'none',
+          color: loading ? '#C8D400' : 'rgba(255,255,255,0.5)', fontSize:15, pointerEvents:'none',
         }}>
           {loading ? '⟳' : '🔍'}
         </div>
@@ -177,9 +177,9 @@ function MapSearchBar({ onSelect }) {
 
       {showDrop && suggestions.length > 0 && (
         <div style={{
-          marginTop:4, background:'rgba(15,17,23,0.97)', backdropFilter:'blur(12px)',
-          border:'1px solid rgba(79,142,247,0.3)', borderRadius:10,
-          overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,0.7)',
+          marginTop:4, background:'rgba(7,46,36,0.97)', backdropFilter:'blur(12px)',
+          border:'1px solid rgba(200,212,0,0.2)', borderRadius:12,
+          overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,0.4)',
         }}>
           {suggestions.map((s,i) => (
             <div
@@ -187,15 +187,15 @@ function MapSearchBar({ onSelect }) {
               onMouseDown={e => { e.preventDefault(); select(s) }}
               style={{
                 padding:'10px 14px', cursor:'pointer', display:'flex', gap:10, alignItems:'flex-start',
-                borderBottom: i < suggestions.length-1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                borderBottom: i < suggestions.length-1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
               }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(79,142,247,0.12)'}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(200,212,0,0.1)'}
               onMouseLeave={e => e.currentTarget.style.background='transparent'}
             >
               <span style={{ fontSize:14, marginTop:1, flexShrink:0 }}>📍</span>
               <div>
-                <div style={{ fontSize:13, color:'#dde2ee', fontWeight:600 }}>{s.label}</div>
-                <div style={{ fontSize:11, color:'#5a6480', overflow:'hidden', textOverflow:'ellipsis',
+                <div style={{ fontSize:13, color:'#fff', fontWeight:600 }}>{s.label}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', overflow:'hidden', textOverflow:'ellipsis',
                   display:'-webkit-box', WebkitLineClamp:1, WebkitBoxOrient:'vertical' }}>{s.full}</div>
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function LiveHazardMap({ height = '100vh', showSearch = true, sho
         ref={mapRef}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
           maxZoom={19}
         />
@@ -400,13 +400,13 @@ export default function LiveHazardMap({ height = '100vh', showSearch = true, sho
             <Circle
               center={[userPos.lat, userPos.lng]}
               radius={userPos.accuracy || 50}
-              pathOptions={{ color:'#4f8ef7', fillColor:'#4f8ef7', fillOpacity:0.12, weight:1 }}
+              pathOptions={{ color:'#156B52', fillColor:'#156B52', fillOpacity:0.12, weight:1 }}
             />
             {/* Pulsing dot */}
             <CircleMarker
               center={[userPos.lat, userPos.lng]}
               radius={8}
-              pathOptions={{ color:'#fff', fillColor:'#4f8ef7', fillOpacity:1, weight:2 }}
+              pathOptions={{ color:'#fff', fillColor:'#C8D400', fillOpacity:1, weight:2 }}
             >
               <Popup><strong>You are here</strong><br/>{userPos.lat.toFixed(5)}, {userPos.lng.toFixed(5)}</Popup>
             </CircleMarker>
@@ -431,11 +431,11 @@ export default function LiveHazardMap({ height = '100vh', showSearch = true, sho
                 padding:'6px 12px', borderRadius:100, border:'none', fontSize:12, fontWeight:700,
                 cursor:'pointer', transition:'all .2s',
                 background: filter===sev
-                  ? (sev==='all' ? '#4f8ef7' : SEV_COLOR[sev])
-                  : 'rgba(15,17,23,0.85)',
-                color: filter===sev ? '#fff' : '#8b9bb4',
+                  ? (sev==='all' ? '#C8D400' : SEV_COLOR[sev])
+                  : 'rgba(7,46,36,0.85)',
+                color: filter===sev ? (sev==='all'?'#072E24':'#fff') : 'rgba(255,255,255,0.6)',
                 backdropFilter:'blur(8px)',
-                boxShadow: filter===sev ? `0 2px 12px ${sev==='all'?'#4f8ef744':(SEV_COLOR[sev]||'#fff')+'44'}` : 'none',
+                boxShadow: filter===sev ? `0 2px 12px ${sev==='all'?'#C8D40044':(SEV_COLOR[sev]||'#fff')+'44'}` : 'none',
               }}
             >
               {sev==='all' ? `All (${counts.all})` : `${sev.charAt(0).toUpperCase()+sev.slice(1)} (${counts[sev]})`}
@@ -454,7 +454,7 @@ export default function LiveHazardMap({ height = '100vh', showSearch = true, sho
             width:48, height:48, borderRadius:'50%', border:'none', cursor:'pointer',
             background: tracking
               ? 'linear-gradient(135deg,#ef4444,#dc2626)'
-              : 'linear-gradient(135deg,#4f8ef7,#7c3aed)',
+              : 'linear-gradient(135deg,#072E24,#156B52)',
             color:'#fff', fontSize:20,
             boxShadow:'0 4px 16px rgba(0,0,0,0.5)',
             display:'flex', alignItems:'center', justifyContent:'center',
@@ -489,12 +489,12 @@ export default function LiveHazardMap({ height = '100vh', showSearch = true, sho
       {tracking && userPos && (
         <div style={{
           position:'absolute', top: showSearch ? 60 : 12, left:16, zIndex:1000,
-          background:'rgba(79,142,247,0.15)', backdropFilter:'blur(8px)',
-          border:'1px solid rgba(79,142,247,0.4)', borderRadius:8,
-          padding:'6px 12px', fontSize:12, color:'#4f8ef7',
+          background:'rgba(21,107,82,0.15)', backdropFilter:'blur(8px)',
+          border:'1px solid rgba(21,107,82,0.4)', borderRadius:8,
+          padding:'6px 12px', fontSize:12, color:'#7fd4b8',
           display:'flex', alignItems:'center', gap:6,
         }}>
-          <span style={{ width:7,height:7,borderRadius:'50%',background:'#4f8ef7',
+          <span style={{ width:7,height:7,borderRadius:'50%',background:'#7fd4b8',
             animation:'livePulse 1s ease-in-out infinite', display:'inline-block' }}/>
           GPS active
         </div>

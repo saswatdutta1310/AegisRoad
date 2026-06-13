@@ -18,7 +18,8 @@ import AuthSystem from './components/AuthSystem';
 import EdgeAI from './components/EdgeAI';
 import CitizenReport from './components/CitizenReport';
 import AlertSettings from './components/AlertSettings';
-import DriveModeButton from './components/DriveMode/DriveModeButton'; // ← NEW
+import DriveModeButton from './components/DriveMode/DriveModeButton';
+import DriveMode from './components/DriveMode/DriveMode';
 import { HazardProvider, useHazards } from './context/HazardContext';
 import { SpendProvider, useSpend } from './context/SpendContext';
 
@@ -27,6 +28,7 @@ function AppShell() {
   const { contractors } = useSpend();
   
   const [activeTab, setActiveTab] = useState('landing');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Auth State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -100,233 +102,201 @@ function AppShell() {
     }
   };
 
+  const navItems = [
+    { id: 'landing',    label: 'Overview',    icon: <BookOpen size={13} />,      roles: null },
+    { id: 'command',    label: 'Command',      icon: <LayoutDashboard size={13} />,roles: ['government'] },
+    { id: 'spend',      label: 'SpendWatch',   icon: <Coins size={13} />,         roles: ['government'] },
+    { id: 'explorer',   label: 'Hazard Map',   icon: <Map size={13} />,           roles: null },
+    { id: 'edgeai',     label: 'Edge AI',      icon: <Camera size={13} />,        roles: null },
+    { id: 'citizen',    label: 'Report',       icon: <AlertTriangle size={13} />, roles: [null, 'government'] },
+    { id: 'driver',     label: 'Driver HUD',   icon: <Smartphone size={13} />,    roles: ['worker'] },
+    { id: 'contractor', label: 'Contractor',   icon: <Building size={13} />,      roles: ['contractor'] },
+    { id: 'settings',   label: 'Settings',     icon: <Settings size={13} />,      roles: null },
+  ];
+
+  const visibleNavItems = navItems.filter(item => {
+    if (!item.roles) return true;
+    if (item.roles.includes(null)) {
+      if (!currentUser) return true;
+      if (item.roles.includes(currentUser?.role)) return true;
+      return false;
+    }
+    return item.roles.includes(currentUser?.role);
+  });
+
+  const handleNavClick = (tabId) => {
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-[#050914] text-slate-100 flex flex-col justify-between font-sans selection:bg-[#2ea014] selection:text-white">
+    <div className="min-h-screen bg-[#F4F0E6] text-[#0D1E1B] flex flex-col font-sans selection:bg-[#C8D400] selection:text-[#072E24]">
       
-      {/* Top Main Brand Header */}
-      <header className="bg-[#0c1223] border-b border-slate-800/80 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-all flex-col lg:flex-row justify-between items-center gap-4">
+      {/* ── NAV ─────────────────────────────────────────────── */}
+      <header 
+        className="sticky top-0 z-40 bg-white/93 backdrop-blur-[16px] border-b border-black/5"
+        style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
+      >
+        <div className="max-w-7xl mx-auto px-5 lg:px-10 py-3.5 flex items-center justify-between gap-6">
           
-          <div className="flex items-center gap-6 w-full lg:w-auto justify-between lg:justify-start">
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 rounded-lg bg-[#2ea014] flex items-center justify-center text-slate-950 relative">
-                <ShieldCheck size={20} className="text-white" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#0c1223]"></div>
-              </div>
-              <div>
-                <h1 className="text-base font-black text-white leading-tight tracking-[0.05em] uppercase flex items-center gap-1">
-                  AegisRoad <span className="text-[9px] bg-emerald-950 text-[#2ea014] border border-[#2ea014]/40 font-bold px-1.5 py-0.5 rounded ml-1 font-mono">v3.0</span>
-                </h1>
-                <p className="text-[9px] text-slate-400 uppercase tracking-widest leading-none mt-1 font-mono">Civil Pavement & Spend Safety</p>
-              </div>
+          {/* Logo */}
+          <button 
+            onClick={() => handleNavClick('landing')}
+            className="flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+              style={{ background: '#072E24', color: '#C8D400' }}
+            >
+              🛡
+            </div>
+            <span 
+              className="text-[22px] font-black tracking-tight hidden sm:block"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#072E24', letterSpacing: '-0.5px' }}
+            >
+              Aegis<span style={{ color: '#C8D400' }}>Road</span>
+            </span>
+          </button>
+
+          {/* Desktop nav links */}
+          <nav className="hidden lg:flex items-center gap-0.5 rounded-xl p-1" style={{ background: '#F4F0E6', border: '1px solid rgba(13,30,27,0.08)' }}>
+            {visibleNavItems.map(item => (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  activeTab === item.id
+                    ? 'text-[#072E24]'
+                    : 'text-[#072E24]/50 hover:text-[#072E24]/80 hover:bg-[#EAE5D6]'
+                }`}
+                style={activeTab === item.id ? { background: '#C8D400' } : {}}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+            <DriveModeButton hazards={hazards} onNavigate={handleNavClick} />
+          </nav>
+
+          {/* Right side — always visible */}
+          <div className="flex items-center gap-2 shrink-0">
+
+            {/* ── DRIVE MODE BUTTON — visible on mobile too ── */}
+            <div className="lg:hidden">
+              <DriveModeButton hazards={hazards} onNavigate={handleNavClick} />
             </div>
 
-            <div className="lg:hidden text-xs">
-              {currentUser ? (
-                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-2 py-1 rounded">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#2ea014] animate-ping"></span>
-                  <span className="font-mono text-[9px] uppercase tracking-tight text-slate-300">{currentUser.role}</span>
+            {/* Auth — hidden on very small screens, shown sm+ */}
+            {currentUser ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] font-mono font-bold uppercase tracking-tight border"
+                  style={{ 
+                    background: '#072E24', 
+                    color: '#C8D400', 
+                    borderColor: 'rgba(200,212,0,0.3)'
+                  }}
+                >
+                  {currentUser.role === 'government' ? <ShieldCheck size={11} /> : currentUser.role === 'contractor' ? <Building size={11} /> : <Wrench size={11} />}
+                  {currentUser.username}
                 </div>
-              ) : (
-                <span className="text-[9px] px-2 py-1 rounded bg-slate-950 text-slate-500 border border-slate-900 font-mono text-center">GUEST MODE</span>
-              )}
-            </div>
+                <button 
+                  onClick={handleLogout}
+                  className="p-1.5 rounded border text-[#072E24]/50 hover:text-[#072E24] hover:border-[#072E24]/30 transition-all cursor-pointer"
+                  style={{ borderColor: 'rgba(13,30,27,0.15)' }}
+                  title="Sign Out"
+                >
+                  <LogOut size={13} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                style={{ background: '#072E24', color: '#C8D400', fontFamily: "'Barlow Condensed', sans-serif" }}
+              >
+                <LogIn size={12} />
+                Login
+              </button>
+            )}
+
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setMobileMenuOpen(p => !p)}
+              className="lg:hidden p-2 rounded border transition-all cursor-pointer"
+              style={{ borderColor: 'rgba(13,30,27,0.15)', color: '#072E24' }}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              <div className="w-4 h-3 flex flex-col justify-between">
+                <span className={`block h-0.5 bg-current transition-all duration-200 ${mobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+                <span className={`block h-0.5 bg-current transition-all duration-200 ${mobileMenuOpen ? 'opacity-0' : ''}`} />
+                <span className={`block h-0.5 bg-current transition-all duration-200 ${mobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+              </div>
+            </button>
           </div>
+        </div>
 
-          {/* Nav + Auth row */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-            <nav className="flex flex-wrap bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/60 gap-0.5 w-full sm:w-auto justify-center">
-              
-              <button
-                id="nav-tab-landing"
-                onClick={() => setActiveTab('landing')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'landing' 
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <BookOpen size={11} />
-                Overview
-              </button>
+        {/* ── Mobile dropdown ── */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-black/5 bg-white">
+            <div className="max-w-7xl mx-auto px-5 py-3 flex flex-col gap-1">
 
-              {(!currentUser || currentUser.role === 'government') && (
-                <>
-                  {currentUser && currentUser.role === 'government' && (
-                    <>
-                      <button
-                        id="nav-tab-command"
-                        onClick={() => setActiveTab('command')}
-                        className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                          activeTab === 'command' 
-                            ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        <LayoutDashboard size={11} />
-                        Command Center
-                      </button>
-
-                      <button
-                        id="nav-tab-spend"
-                        onClick={() => setActiveTab('spend')}
-                        className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                          activeTab === 'spend' 
-                            ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                        title="Formerly SpendWatch"
-                      >
-                        <Coins size={11} />
-                        Spend Watch
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    id="nav-tab-explorer"
-                    onClick={() => setActiveTab('explorer')}
-                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                      activeTab === 'explorer' 
-                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                    title="Public Transparency Map"
-                  >
-                    <Map size={11} />
-                    {currentUser?.role === 'government' ? 'Hazard Map' : 'Public Map'}
-                  </button>
-
-                  <button
-                    id="nav-tab-edgeai"
-                    onClick={() => setActiveTab('edgeai')}
-                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                      activeTab === 'edgeai' 
-                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Camera size={11} />
-                    Edge AI
-                  </button>
-
-                  <button
-                    id="nav-tab-citizen"
-                    onClick={() => setActiveTab('citizen')}
-                    className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                      activeTab === 'citizen' 
-                        ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <AlertTriangle size={11} />
-                    Report Issue
-                  </button>
-                </>
-              )}
-
-              {currentUser && currentUser.role === 'worker' && (
+              {/* Nav items */}
+              {visibleNavItems.map(item => (
                 <button
-                  id="nav-tab-driver"
-                  onClick={() => setActiveTab('driver')}
-                  className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                    activeTab === 'driver' 
-                      ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-200'
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer text-left ${
+                    activeTab === item.id
+                      ? 'text-[#072E24]'
+                      : 'text-[#072E24]/60 hover:text-[#072E24] hover:bg-[#F4F0E6]'
                   }`}
+                  style={activeTab === item.id ? { background: '#C8D400' } : {}}
                 >
-                  <Smartphone size={11} />
-                  Driver Mobile
+                  {item.icon}
+                  {item.label}
                 </button>
-              )}
+              ))}
 
-              {currentUser && currentUser.role === 'contractor' && (
-                <button
-                  id="nav-tab-contractor"
-                  onClick={() => setActiveTab('contractor')}
-                  className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                    activeTab === 'contractor' 
-                      ? 'bg-[#2ea014] text-white shadow font-extrabold' 
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Building size={11} />
-                  Contractor Portal
-                </button>
-              )}
-
-              {/* ── SETTINGS BUTTON ── */}
-              <button
-                id="nav-tab-settings"
-                onClick={() => setActiveTab('settings')}
-                className={`px-2.5 py-1.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                  activeTab === 'settings'
-                    ? 'bg-[#2ea014] text-white shadow font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Alert Settings"
-              >
-                <Settings size={11} />
-                Settings
-              </button>
-
-              {/* ── DRIVE MODE BUTTON ── always visible in navbar ── */}
-              <DriveModeButton hazards={hazards} />
-
-            </nav>
-
-            {/* Auth section */}
-            <div className="shrink-0 flex items-center gap-2 pl-2 border-t sm:border-t-0 sm:border-l border-slate-800/80 pt-2 sm:pt-0 w-full sm:w-auto justify-center">
-              {currentUser ? (
-                <div className="flex items-center gap-2">
-                  <div className={`px-2 py-1 rounded text-[9px] font-mono font-bold border flex items-center gap-1 ${
-                    currentUser.role === 'contractor' 
-                      ? 'bg-green-950/80 text-emerald-400 border-emerald-900' 
-                      : currentUser.role === 'government' 
-                        ? 'bg-sky-950/80 text-sky-400 border-sky-900' 
-                        : 'bg-amber-950/80 text-amber-400 border-amber-900'
-                  }`}>
-                    {currentUser.role === 'contractor' ? <Building size={10} /> : currentUser.role === 'government' ? <ShieldCheck size={10} /> : <Wrench size={10} />}
-                    <span className="uppercase tracking-tight">{currentUser.role === 'government' ? 'Officer' : currentUser.role}</span>
+              {/* Auth row in mobile menu */}
+              <div className="pt-2 border-t border-black/5 mt-1">
+                {currentUser ? (
+                  <div className="flex items-center justify-between px-1 py-1">
+                    <div className="flex items-center gap-1.5">
+                      {currentUser.role === 'government' ? <ShieldCheck size={12} className="text-[#072E24]" /> : currentUser.role === 'contractor' ? <Building size={12} className="text-[#072E24]" /> : <Wrench size={12} className="text-[#072E24]" />}
+                      <span className="text-xs font-bold text-[#072E24]">
+                        {currentUser.username} · {currentUser.role}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                      className="text-xs text-red-600 font-bold flex items-center gap-1 cursor-pointer px-2 py-1 rounded hover:bg-red-50"
+                    >
+                      <LogOut size={11} /> Logout
+                    </button>
                   </div>
-                  
-                  <div className="hidden xl:flex flex-col text-right">
-                    <span className="text-[10px] font-bold text-slate-100 max-w-[100px] truncate leading-tight">{currentUser.username}</span>
-                    <span className="text-[8px] text-slate-400 font-mono leading-none truncate max-w-[100px]">{currentUser.orgName}</span>
-                  </div>
-
-                  <button 
-                    onClick={handleLogout}
-                    className="p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 transition-all cursor-pointer"
-                    title="Sign Out"
-                  >
-                    <LogOut size={11} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 px-1.5 py-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-600 animate-pulse"></span>
-                    Observer Mode
-                  </span>
+                ) : (
                   <button
-                    onClick={() => setIsAuthOpen(true)}
-                    className="px-3 py-1.5 rounded bg-[#2ea014]/15 hover:bg-[#2ea014] border border-[#2ea014]/40 text-[#2ea014] hover:text-white font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 hover:scale-[1.01] cursor-pointer"
+                    onClick={() => { setIsAuthOpen(true); setMobileMenuOpen(false); }}
+                    className="w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-center cursor-pointer"
+                    style={{ background: '#072E24', color: '#C8D400', fontFamily: "'Barlow Condensed', sans-serif" }}
                   >
-                    <LogIn size={10} />
                     Login / Sign Up
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-
-        </div>
+        )}
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'landing' && (
+      {/* ── MAIN CONTENT ──────────────────────────────────── */}
+      <main className="flex-1">
+        {activeTab === 'drivemode' && (
+          <DriveMode onClose={() => setActiveTab('landing')} />
+        )}
+
+        {activeTab !== 'drivemode' && activeTab === 'landing' && (
           <LandingPage 
             onNavigate={(tab) => setActiveTab(tab)} 
             stats={{
@@ -338,82 +308,104 @@ function AppShell() {
           />
         )}
 
-        {activeTab === 'command' && (
-          <CommandCenter
-            hazards={hazards}
-            contracts={contracts}
-            contractors={contractors}
-            slaBreaches={slaBreaches}
-            onReportHazard={handleReportHazard}
-            onModifyHazard={handleModifyHazard}
-            onUpdateSLABreach={handleUpdateSLABreach}
-          />
-        )}
-
-        {activeTab === 'spend' && (
-          <SpendWatch 
-            contracts={contracts}
-            contractors={contractors}
-          />
-        )}
-
-        {activeTab === 'explorer' && (
-          <HazardExplorer
-            hazards={hazards}
-            contracts={contracts}
-            onReportHazard={handleReportHazard}
-            onModifyHazard={handleModifyHazard}
-            currentUser={currentUser}
-          />
-        )}
-        
-        {activeTab === 'edgeai' && (
-          <EdgeAI />
-        )}
-
-        {activeTab === 'citizen' && (!currentUser || currentUser.role === 'government') && (
-          <CitizenReport onReportHazard={handleReportHazard} />
-        )}
-
-        {activeTab === 'driver' && currentUser && currentUser.role === 'worker' && (
-          <DriverMobile
-            hazards={hazards}
-            onReportHazard={handleReportHazard}
-            currentUser={currentUser}
-            onTriggerLogin={() => setIsAuthOpen(true)}
-          />
-        )}
-
-        {activeTab === 'settings' && (
-          <AlertSettings onBack={() => setActiveTab('landing')} />
-        )}
-
-        {activeTab === 'contractor' && (
-          currentUser ? (
-            <ContractorPortal
+        <div className="max-w-7xl mx-auto px-5 lg:px-10 py-8">
+          {activeTab === 'command' && (
+            <CommandCenter
               hazards={hazards}
+              contracts={contracts}
               contractors={contractors}
+              slaBreaches={slaBreaches}
+              onReportHazard={handleReportHazard}
               onModifyHazard={handleModifyHazard}
+              onUpdateSLABreach={handleUpdateSLABreach}
+            />
+          )}
+
+          {activeTab === 'spend' && (
+            <SpendWatch 
+              contracts={contracts}
+              contractors={contractors}
+            />
+          )}
+
+          {activeTab === 'explorer' && (
+            <HazardExplorer
+              hazards={hazards}
+              contracts={contracts}
+              onReportHazard={handleReportHazard}
+              onModifyHazard={handleModifyHazard}
+              currentUser={currentUser}
+            />
+          )}
+          
+          {activeTab === 'edgeai' && (
+            <EdgeAI />
+          )}
+
+          {activeTab === 'citizen' && (!currentUser || currentUser.role === 'government') && (
+            <CitizenReport onReportHazard={handleReportHazard} />
+          )}
+
+          {activeTab === 'driver' && currentUser && currentUser.role === 'worker' && (
+            <DriverMobile
+              hazards={hazards}
+              onReportHazard={handleReportHazard}
               currentUser={currentUser}
               onTriggerLogin={() => setIsAuthOpen(true)}
             />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64 bg-slate-900 border border-slate-800 rounded-xl">
-              <Lock size={48} className="text-slate-600 mb-4" />
-              <h2 className="text-xl font-bold text-slate-300 mb-2">Access Denied</h2>
-              <p className="text-slate-500 mb-6">You must be logged in to access the Contractor Portal.</p>
-              <button onClick={() => setIsAuthOpen(true)} className="px-6 py-2 bg-[#2ea014] text-white font-bold rounded-lg hover:bg-emerald-600 transition">
-                Login Now
-              </button>
-            </div>
-          )
-        )}
+          )}
+
+          {activeTab === 'settings' && (
+            <AlertSettings onBack={() => setActiveTab('landing')} />
+          )}
+
+          {activeTab === 'contractor' && (
+            currentUser ? (
+              <ContractorPortal
+                hazards={hazards}
+                contractors={contractors}
+                onModifyHazard={handleModifyHazard}
+                currentUser={currentUser}
+                onTriggerLogin={() => setIsAuthOpen(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 bg-white border border-black/8 rounded-2xl shadow-sm">
+                <Lock size={44} className="mb-4" style={{ color: '#156B52' }} />
+                <h2 className="text-2xl font-black uppercase mb-2" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#072E24' }}>Access Denied</h2>
+                <p className="text-sm mb-6" style={{ color: 'rgba(13,30,27,0.5)' }}>You must be logged in to access the Contractor Portal.</p>
+                <button 
+                  onClick={() => setIsAuthOpen(true)} 
+                  className="px-8 py-3 font-black text-sm uppercase tracking-wider rounded-xl cursor-pointer transition-all hover:scale-105"
+                  style={{ background: '#C8D400', color: '#072E24', fontFamily: "'Barlow Condensed', sans-serif" }}
+                >
+                  Login Now →
+                </button>
+              </div>
+            )
+          )}
+        </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#070b18] border-t border-slate-900 py-5 mt-10">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-600 text-xs font-mono">
-          <p>© 2026 AegisRoad Intelligence Inc. Bound under municipal road safety & spend audit provisions.</p>
+      {/* ── FOOTER ──────────────────────────────────────────── */}
+      <footer 
+        className="border-t py-10 mt-8"
+        style={{ background: '#072E24', borderColor: 'rgba(255,255,255,0.06)' }}
+      >
+        <div className="max-w-7xl mx-auto px-5 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span 
+            className="text-2xl font-black"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#C8D400' }}
+          >
+            AegisRoad
+          </span>
+          <div className="flex gap-6 text-sm" style={{ color: 'rgba(255,255,255,0.38)' }}>
+            <button onClick={() => setActiveTab('landing')} className="hover:text-[#C8D400] transition-colors cursor-pointer">Overview</button>
+            <button onClick={() => setActiveTab('explorer')} className="hover:text-[#C8D400] transition-colors cursor-pointer">Hazard Map</button>
+            <button onClick={() => setActiveTab('citizen')} className="hover:text-[#C8D400] transition-colors cursor-pointer">Report</button>
+          </div>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>
+            © 2026 AegisRoad Intelligence Inc.
+          </p>
         </div>
       </footer>
 

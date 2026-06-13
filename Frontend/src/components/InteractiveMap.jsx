@@ -98,15 +98,16 @@ export default function InteractiveMap({
         <button
           type="button"
           onClick={handleToggleLiveLocation}
-          className={`h-8 px-3 text-[10px] uppercase font-bold rounded-lg flex items-center justify-center gap-1.5 border cursor-pointer transition-all shadow ${
+          className={`h-8 px-3 text-[10px] uppercase font-bold rounded-xl flex items-center justify-center gap-1.5 border cursor-pointer transition-all shadow ${
             isLiveLocationActive
-              ? 'bg-sky-950 border-sky-600/80 text-sky-400 animate-pulse font-black'
-              : 'bg-slate-900/95 border-slate-700 text-slate-300 hover:text-white hover:border-slate-600'
+              ? 'border-[#156B52] text-[#156B52] animate-pulse font-black'
+              : 'text-[rgba(13,30,27,0.6)] hover:text-[#072E24]'
           }`}
+          style={{ background: isLiveLocationActive ? 'rgba(21,107,82,0.12)' : 'rgba(244,240,230,0.95)', borderColor: isLiveLocationActive ? '#156B52' : 'rgba(13,30,27,0.15)' }}
           title="Toggle GPS position"
         >
-          <Navigation2 size={12} className={isLiveLocationActive ? 'fill-sky-400 rotate-45' : ''} />
-          <span>{isLiveLocationActive ? 'GPS Locked' : 'Re-Lock GPS'}</span>
+          <Navigation2 size={12} className={isLiveLocationActive ? 'fill-[#156B52] rotate-45' : ''} />
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{isLiveLocationActive ? 'GPS Locked' : 'Re-Lock GPS'}</span>
         </button>
       </div>
 
@@ -121,15 +122,15 @@ export default function InteractiveMap({
         <ChangeView center={mapCenter} zoom={zoomLevel} />
 
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
 
         {userLocation && (
           <CircleMarker
             center={userLocation}
-            radius={8}
-            pathOptions={{ color: '#38bdf8', fillColor: '#38bdf8', fillOpacity: 0.5 }}
+            radius={9}
+            pathOptions={{ color: '#072E24', fillColor: '#C8D400', fillOpacity: 0.9, weight: 2 }}
           >
             <Popup>Your Location</Popup>
           </CircleMarker>
@@ -137,27 +138,26 @@ export default function InteractiveMap({
 
         {(activeView === 'hazard' || activeView === 'driver') &&
           hazards.map((h) => {
-            let color = '#2ea014';
-            if (h.severity === 'critical') color = '#f43f5e';
-            else if (h.severity === 'high') color = '#f97316';
-            else if (h.severity === 'medium') color = '#fbbf24';
-            if (h.status === 'completed') color = '#10b981';
+            let color = '#156B52';
+            if (h.severity === 'critical') color = '#dc2626';
+            else if (h.severity === 'high') color = '#ea580c';
+            else if (h.severity === 'medium') color = '#d97706';
+            if (h.status === 'completed') color = '#16a34a';
 
             return (
               <CircleMarker
                 key={h.id}
                 center={[h.lat ?? CENTER_LAT, h.lng ?? CENTER_LNG]}
-                radius={selectedHazardId === h.id ? 12 : 8}
-                pathOptions={{ color, fillColor: color, fillOpacity: 0.8 }}
+                radius={selectedHazardId === h.id ? 13 : 8}
+                pathOptions={{ color, fillColor: color, fillOpacity: 0.85, weight: selectedHazardId === h.id ? 3 : 2 }}
                 eventHandlers={{ click: () => onSelectHazard?.(h) }}
               >
                 <Popup>
-                  <div className="font-sans text-xs min-w-[140px]">
-                    <strong>{h.title || h.cls}</strong>
+                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', minWidth: '140px', color: '#0D1E1B' }}>
+                    <strong style={{ display: 'block', marginBottom: '2px' }}>{h.title || h.cls}</strong>
+                    <span style={{ color: '#156B52' }}>{h.location || h.road_name}</span>
                     <br />
-                    {h.location || h.road_name}
-                    <br />
-                    <span className="text-slate-500">Status: {h.status}</span>
+                    <span style={{ color: 'rgba(13,30,27,0.5)', fontSize: '11px' }}>Status: {h.status}</span>
                   </div>
                 </Popup>
               </CircleMarker>
@@ -188,7 +188,7 @@ export default function InteractiveMap({
             const lat = CENTER_LAT + (50 - y) * 0.0006;
             const lng = CENTER_LNG + (x - 50) * 0.0006;
             const color =
-              c.efficiencyScore >= 90 ? '#10b981' : c.efficiencyScore < 75 ? '#f43f5e' : '#f59e0b';
+              c.efficiencyScore >= 90 ? '#156B52' : c.efficiencyScore < 75 ? '#dc2626' : '#d97706';
             const size = Math.max(15, Math.min(30, c.tenderValue * 2));
 
             return (

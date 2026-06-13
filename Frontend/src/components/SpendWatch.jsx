@@ -1,452 +1,233 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
-} from 'recharts';
-import { 
-  Search, ArrowDownRight, ArrowUpRight, Award, ShieldAlert, 
-  Coins, Filter, ChevronRight, HelpCircle, FileSpreadsheet, Building 
-} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Search, ArrowDownRight, Award, ShieldAlert, Coins, FileSpreadsheet, Building } from 'lucide-react';
 
-// ── Backend base URL ───────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const T = { teal:'#072E24', tealMid:'#156B52', yellow:'#C8D400', cream:'#F4F0E6', creamDark:'#EAE5D6', textDark:'#0D1E1B' };
+const card = { background:'#FFFFFF', border:'1px solid rgba(13,30,27,0.1)', borderRadius:'16px', padding:'20px' };
+const badge = (c,bg) => ({ color:c, background:bg, fontSize:'9px', fontFamily:'monospace', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', padding:'3px 8px', borderRadius:'6px', display:'inline-flex', alignItems:'center', gap:'4px' });
 
-export default function SpendWatch({
-  contracts = [],
-  contractors = [],
-  hazards = []
-}) {
+export default function SpendWatch({ contracts = [], contractors = [], hazards = [] }) {
   const [selectedContract, setSelectedContract] = useState(contracts[0] || null);
   const [sectorFilter, setSectorFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [exportLoading, setExportLoading] = useState(false);  // ← loading state for button
+  const [exportLoading, setExportLoading] = useState(false);
 
-  // Total municipal financial calculations
-  const totalAllocated = contracts.reduce((sum, c) => sum + c.budgetAllocated, 0);
-  const totalDisbursed = contracts.reduce((sum, c) => sum + c.amountDisbursed, 0);
+  const totalAllocated = contracts.reduce((s,c) => s+(c.budgetAllocated||0), 0);
+  const totalDisbursed = contracts.reduce((s,c) => s+(c.amountDisbursed||0), 0);
   const totalRemaining = totalAllocated - totalDisbursed;
-  const avgEfficiency = (contracts.reduce((sum, c) => sum + c.efficiencyScore, 0) / contracts.length).toFixed(0);
+  const avgEfficiency = contracts.length ? (contracts.reduce((s,c) => s+(c.efficiencyScore||0), 0)/contracts.length).toFixed(0) : 0;
 
-  // Grouped data for the Recharts Bar Chart
   const chartData = contracts.map(c => ({
     name: c.sector,
     Allocated: c.budgetAllocated,
     Disbursed: c.amountDisbursed,
-    Remaining: Number(c.remainingBudget || (c.budgetAllocated - c.amountDisbursed).toFixed(1))
+    Remaining: Number(c.remainingBudget||(c.budgetAllocated-c.amountDisbursed).toFixed(1))
   }));
 
-  // Filtering contracts
   const filteredContracts = contracts.filter(c => {
-    const matchesSector = sectorFilter === 'all' || c.sector === sectorFilter;
-    const matchesQuery = searchQuery === '' || 
-      c.contractor.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSector && matchesQuery;
+    const ms = sectorFilter==='all'||c.sector===sectorFilter;
+    const mq = !searchQuery||[c.contractor,c.name,c.id].some(v=>v?.toLowerCase().includes(searchQuery.toLowerCase()));
+    return ms && mq;
   });
 
-  // Ranked contractors ledger by efficiency scale
-  const rankedContractors = [...contractors].sort((a, b) => b.successRate - a.successRate);
+  const rankedContractors = [...contractors].sort((a,b) => b.successRate-a.successRate);
 
-
-  // ── EXPORT AUDIT handler ───────────────────────────────────────────────────
   const handleExportAudit = async () => {
     setExportLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/api/v1/spend/export`, {
-        responseType: 'blob',           // treat response as binary file stream
-      });
-
-      // Create an in-memory object URL from the blob
-      const url = window.URL.createObjectURL(
-        new Blob([response.data], { type: 'text/csv' })
-      );
-
-      // Inject a hidden <a> tag, click it to trigger download, then remove it
+      const response = await axios.get(`${API_BASE}/api/v1/spend/export`, { responseType:'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data],{type:'text/csv'}));
       const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'aegisroad_contracts_audit.csv');
-      document.body.appendChild(link);
-      link.click();
-
-      // Clean up — revoke the object URL and remove the link element
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
+      link.href = url; link.setAttribute('download','aegisroad_contracts_audit.csv');
+      document.body.appendChild(link); link.click();
+      link.parentNode.removeChild(link); window.URL.revokeObjectURL(url);
     } catch (error) {
-      // Backend may be sleeping (Render cold start) or unreachable
-      if (error.response) {
-        // Server replied with a non-2xx status
-        console.error('Export failed — server error:', error.response.status, error.response.data);
-        alert(`Export failed: server returned ${error.response.status}. Please try again.`);
-      } else if (error.request) {
-        // Request was made but no response received (backend asleep / network issue)
-        console.error('Export failed — no response from backend. Is the server awake?', error.request);
-        alert('Export failed: backend is unreachable or still waking up. Please wait 30 seconds and try again.');
-      } else {
-        // Something went wrong setting up the request
-        console.error('Export failed — unexpected error:', error.message);
-        alert(`Export failed: ${error.message}`);
-      }
-    } finally {
-      setExportLoading(false);
-    }
+      if (error.response) alert(`Export failed: server returned ${error.response.status}.`);
+      else if (error.request) alert('Export failed: backend is unreachable. Please wait 30 seconds and try again.');
+      else alert(`Export failed: ${error.message}`);
+    } finally { setExportLoading(false); }
   };
-  // ── end EXPORT AUDIT handler ───────────────────────────────────────────────
 
+  const TooltipStyle = { contentStyle:{ background:T.teal, border:`1px solid rgba(200,212,0,0.2)`, color:'#fff', borderRadius:'12px', fontSize:'12px' }, labelStyle:{ color:T.yellow, fontWeight:700 }, itemStyle:{ color:'rgba(255,255,255,0.8)' } };
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Visual Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-5 border-b" style={{ borderColor:'rgba(13,30,27,0.12)' }}>
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-widest bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-mono">
-              FINANCIAL SPENDWATCH PORTAL
+          <div className="flex items-center gap-2 mb-1">
+            <span style={badge(T.tealMid,'rgba(21,107,82,0.12)')}>
+              <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-ping inline-block" />FINANCIAL SPENDWATCH PORTAL
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-ping"></span>
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1 flex items-center gap-2">
-            SpendWatch Dashboard
-            <span className="text-xs text-slate-450 font-mono font-medium">(Public Ledger)</span>
+          <h1 className="text-[clamp(28px,4vw,44px)] font-black uppercase leading-tight" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>
+            SpendWatch Dashboard <span className="text-base font-medium normal-case" style={{ color:'rgba(13,30,27,0.4)', fontFamily:'monospace' }}>(Public Ledger)</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Citizen audit tool tracking public tenders, milestone disbursements, and taxpayer efficiency indexes.
-          </p>
+          <p className="text-sm mt-1" style={{ color:'rgba(13,30,27,0.5)' }}>Citizen audit tool tracking public tenders, milestone disbursements, and taxpayer efficiency indexes.</p>
         </div>
-
-        <div className="flex gap-2">
-          {/* ── FIXED: was window.print(), now calls live backend CSV export ── */}
-          <button
-            onClick={handleExportAudit}
-            disabled={exportLoading}
-            className="cursor-pointer bg-slate-800 text-slate-200 hover:text-white border border-slate-755 hover:border-slate-600 text-xs font-bold px-3 py-2 rounded flex items-center gap-1.5 transition-colors font-mono uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <FileSpreadsheet size={13} />
-            {exportLoading ? 'Exporting...' : 'Export Audit'}
-          </button>
-        </div>
+        <button onClick={handleExportAudit} disabled={exportLoading} className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-all border" style={{ borderColor:'rgba(13,30,27,0.15)', color:T.teal, background:'transparent', fontFamily:"'Barlow Condensed',sans-serif" }}>
+          <FileSpreadsheet size={14} />{exportLoading?'Exporting...':'Export Audit CSV'}
+        </button>
       </div>
 
-      {/* Financial KPI Summary Grids */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI: Total Allocated */}
-        <div className="bg-[#0f172a] border border-slate-850 p-4 rounded-xl shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-teal-950/60 text-teal-400 border border-teal-900/40 flex items-center justify-center shrink-0">
-            <Coins size={22} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] uppercase font-extrabold text-slate-500 tracking-wider">Total Corridor Budget</span>
-            <div className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5">
-              {totalAllocated.toFixed(2)} Cr
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-[3px]">
+        {[
+          { icon:<Coins size={22}/>, label:'Total Corridor Budget', val:`${totalAllocated.toFixed(2)} Cr`, sub:'Accumulated tender sums approved', col:T.tealMid, bg:'rgba(21,107,82,0.08)' },
+          { icon:<ArrowDownRight size={22}/>, label:'Milestone Disbursed', val:`${totalDisbursed.toFixed(2)} Cr`, sub:'Approved on proof of milestone', col:'#16a34a', bg:'rgba(22,163,74,0.08)' },
+          { icon:<Coins size={22}/>, label:'Remaining Pipeline', val:`${totalRemaining.toFixed(2)} Cr`, sub:'Retained pending work sign-off', col:'rgba(13,30,27,0.6)', bg:'rgba(13,30,27,0.04)' },
+          { icon:<Award size={22}/>, label:'SLA Spend Efficiency', val:`${avgEfficiency}%`, sub:'Excellent performance scoring', col:'#7c3aed', bg:'rgba(124,58,237,0.08)' },
+        ].map((k,i) => (
+          <div key={i} className="p-6 flex items-center gap-4" style={{ background:T.white, border:'1px solid rgba(13,30,27,0.08)' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background:k.bg, color:k.col }}>{k.icon}</div>
+            <div>
+              <span className="text-[9px] font-black uppercase tracking-wider block mb-0.5" style={{ color:'rgba(13,30,27,0.4)', fontFamily:'monospace' }}>{k.label}</span>
+              <div className="text-2xl font-black leading-none" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:k.col }}>{k.val}</div>
+              <p className="text-[9px] mt-0.5" style={{ color:'rgba(13,30,27,0.4)' }}>{k.sub}</p>
             </div>
-            <p className="text-[9px] text-slate-400 mt-0.5">Accumulated tender sums approved</p>
           </div>
-        </div>
-
-        {/* KPI: Disbursed to Date */}
-        <div className="bg-[#0f172a] border border-slate-850 p-4 rounded-xl shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-emerald-950/60 text-emerald-400 border border-emerald-900/40 flex items-center justify-center shrink-0">
-            <ArrowDownRight size={22} className="text-emerald-400" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] uppercase font-extrabold text-slate-500 tracking-wider">Milestone Disbursed</span>
-            <div className="text-xl sm:text-2xl font-black text-emerald-450 font-mono mt-0.5">
-              {totalDisbursed.toFixed(2)} Cr
-            </div>
-            <p className="text-[9px] text-emerald-500 mt-0.5">Approved on proof of milestone clearance</p>
-          </div>
-        </div>
-
-        {/* KPI: Remaining Pipeline */}
-        <div className="bg-[#0f172a] border border-slate-850 p-4 rounded-xl shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0">
-            <Coins size={20} className="text-slate-400" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] uppercase font-extrabold text-slate-500 tracking-wider">Remaining Pipeline</span>
-            <div className="text-xl sm:text-2xl font-black text-slate-200 font-mono mt-0.5">
-              {totalRemaining.toFixed(2)} Cr
-            </div>
-            <p className="text-[9px] text-slate-400 mt-0.5">Retained pending work sign-off</p>
-          </div>
-        </div>
-
-        {/* KPI: SLA Efficiency Index */}
-        <div className="bg-[#0f172a] border border-slate-850 p-4 rounded-xl shadow-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-purple-950/40 text-purple-400 border border-purple-900/40 flex items-center justify-center shrink-0">
-            <Award size={20} />
-          </div>
-          <div className="min-w-0">
-            <span className="text-[9px] uppercase font-extrabold text-slate-500 tracking-wider">SLA Spend Efficiency</span>
-            <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono mt-0.5">
-              {avgEfficiency}%
-            </div>
-            <p className="text-[9px] text-purple-400">Excellent performance scoring</p>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Main Budget Visual Analytics Flow */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recharts Allocation vs Spent Chart bar block */}
-        <div className="lg:col-span-2 bg-[#0f172a] border border-slate-850 p-5 rounded-xl shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-slate-100 mb-1">
-              Fiscal Disbursals by Administrative Sector
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Visualizes assigned corridor funding limits versus actual payouts issued based on technical audits.
-            </p>
-          </div>
-
-          <div className="h-72 w-full pt-2">
+      {/* Chart + Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 rounded-2xl p-5" style={card}>
+          <h3 className="text-lg font-black uppercase mb-1" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>Fiscal Disbursals by Sector</h3>
+          <p className="text-xs mb-4" style={{ color:'rgba(13,30,27,0.45)' }}>Visualizes assigned corridor funding limits versus actual payouts issued.</p>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis 
-                  dataKey="name" 
-                  stroke="#64748b" 
-                  fontSize={10} 
-                  tickLine={false} 
-                />
-                <YAxis 
-                  stroke="#64748b" 
-                  fontSize={10} 
-                  tickLine={false} 
-                  unit="Cr" 
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f8fafc' }} 
-                  itemStyle={{ fontSize: '11px' }}
-                  labelStyle={{ fontWeight: 'bold', fontSize: '11px' }}
-                />
-                <Legend 
-                  wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} 
-                />
-                <Bar dataKey="Allocated" fill="#1e293b" name="Allocated Budget" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Disbursed" fill="#10b981" name="Disbursed Payout" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Remaining" fill="#2ea014" name="Remaining Strut" radius={[3, 3, 0, 0]} />
+              <BarChart data={chartData} margin={{ top:5, right:5, left:-20, bottom:0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(13,30,27,0.06)" />
+                <XAxis dataKey="name" stroke="rgba(13,30,27,0.35)" fontSize={10} tickLine={false} />
+                <YAxis stroke="rgba(13,30,27,0.35)" fontSize={10} tickLine={false} unit="Cr" />
+                <Tooltip {...TooltipStyle} />
+                <Legend wrapperStyle={{ fontSize:'10px', paddingTop:'8px' }} />
+                <Bar dataKey="Allocated" fill="#EAE5D6" name="Allocated Budget" radius={[4,4,0,0]} />
+                <Bar dataKey="Disbursed" fill={T.tealMid} name="Disbursed Payout" radius={[4,4,0,0]} />
+                <Bar dataKey="Remaining" fill={T.yellow} name="Remaining Funds" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Contractor Rank Ledger List */}
-        <div className="lg:col-span-1 bg-[#0f172a] border border-slate-850 p-5 rounded-xl shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-slate-100 flex items-center gap-1.5 mb-1">
-              <Award size={16} className="text-teal-400" />
-              Contractor Score Ladder
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Contractors ranked by certified milestone completion rates.
-            </p>
-
-            <div className="space-y-3.5">
-              {rankedContractors.map((c, index) => {
-                let badge = "text-slate-400 border-slate-800 bg-slate-900";
-                if (index === 0) badge = "text-yellow-405 bg-yellow-950/30 border-yellow-805/30";
-                if (index === 1) badge = "text-slate-200 bg-slate-800 border-slate-700";
-
-                return (
-                  <div 
-                    key={c.name}
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-slate-900 bg-[#0c1222]"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-6 h-6 rounded flex items-center justify-center font-mono font-black text-xs border ${badge}`}>
-                        #{index + 1}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-200 block truncate">{c.name}</span>
-                        <div className="flex gap-2 text-[9px] text-slate-500 font-mono mt-0.5">
-                          <span>{c.activeJobs} active jobs</span>
-                          <span>{c.slaBreaches} SLA breach</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-xs font-mono font-bold text-teal-400">{c.successRate}%</span>
-                      <span className="block text-[8.5px] text-slate-500 uppercase font-bold tracking-tighter">SLA index</span>
+        <div className="rounded-2xl p-5" style={card}>
+          <h3 className="text-lg font-black uppercase flex items-center gap-2 mb-4" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>
+            <Award size={16} style={{ color:T.tealMid }} />Score Ladder
+          </h3>
+          <div className="space-y-3">
+            {rankedContractors.map((c,i) => (
+              <div key={c.name} className="flex items-center justify-between p-3 rounded-xl" style={{ background:T.creamDark, border:'1px solid rgba(13,30,27,0.07)' }}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0" style={{ background: i===0?T.yellow:i===1?'rgba(13,30,27,0.15)':'rgba(13,30,27,0.08)', color: i===0?T.teal:'rgba(13,30,27,0.6)', fontFamily:"'Barlow Condensed',sans-serif" }}>#{i+1}</div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold truncate block" style={{ color:T.teal }}>{c.name}</span>
+                    <div className="flex gap-2 text-[9px] font-mono" style={{ color:'rgba(13,30,27,0.4)' }}>
+                      <span>{c.activeJobs} active</span><span>{c.slaBreaches||0} SLA breach</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-sm font-black font-mono" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.tealMid }}>{c.successRate}%</span>
+                  <span className="block text-[8px] font-black uppercase" style={{ color:'rgba(13,30,27,0.35)' }}>SLA index</span>
+                </div>
+              </div>
+            ))}
           </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-900 text-[9.5px] text-slate-550 leading-tight">
-            *Ranks are compiled daily based on regulatory audit milestones. Standard minimum is 75%.
-          </div>
+          <p className="text-[9px] mt-4 pt-3 border-t" style={{ color:'rgba(13,30,27,0.35)', borderColor:'rgba(13,30,27,0.08)' }}>*Ranks compiled daily. Minimum standard: 75%.</p>
         </div>
       </div>
 
-      {/* Contract Search Table and Inspectors */}
-      <div className="bg-[#0f172a] border border-slate-850 rounded-xl p-5 shadow-2xl">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+      {/* Contracts Table */}
+      <div className="rounded-2xl p-5" style={card}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
           <div>
-            <h3 className="text-base font-black text-slate-100 flex items-center gap-1">
-              Active Road Works Tenders & Records
-            </h3>
-            <p className="text-xs text-slate-400">
-              Query, search, and audit financial disbursement logs of active contractors of record.
-            </p>
+            <h3 className="text-lg font-black uppercase" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>Active Road Works Tenders</h3>
+            <p className="text-xs" style={{ color:'rgba(13,30,27,0.45)' }}>Query, search, and audit financial disbursement logs of active contractors.</p>
           </div>
-
           <div className="flex gap-2 w-full sm:w-auto">
-            <select
-              value={sectorFilter}
-              onChange={(e) => setSectorFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-800 text-slate-350 text-xs px-2 py-1.5 rounded outline-none w-full sm:w-40 font-mono cursor-pointer"
-            >
+            <select value={sectorFilter} onChange={e=>setSectorFilter(e.target.value)} className="text-xs px-3 py-2 rounded-xl outline-none cursor-pointer" style={{ background:T.creamDark, border:'1px solid rgba(13,30,27,0.15)', color:T.textDark }}>
               <option value="all">All Sectors</option>
-              <option value="Metro-01">Sector Metro-01</option>
-              <option value="Metro-02">Sector Metro-02</option>
-              <option value="Metro-03">Sector Metro-03</option>
-              <option value="NH-65">Corridor NH-65</option>
-              <option value="Industrial Zone">Industrial Sector</option>
+              <option value="Metro-01">Metro-01</option><option value="Metro-02">Metro-02</option><option value="Metro-03">Metro-03</option>
+              <option value="NH-65">NH-65</option><option value="Industrial Zone">Industrial Zone</option>
             </select>
-
-            <div className="relative w-full sm:w-48">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contractor..."
-                className="bg-slate-900 border border-slate-800 text-xs text-white pl-8 pr-3 py-1.5 rounded outline-none w-full font-mono placeholder-slate-600"
-              />
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:'rgba(13,30,27,0.35)' }} />
+              <input type="text" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Search contractor..." className="text-xs pl-9 pr-3 py-2 rounded-xl outline-none" style={{ background:T.creamDark, border:'1px solid rgba(13,30,27,0.15)', color:T.textDark, width:'180px' }} />
             </div>
           </div>
         </div>
 
-        {/* Ledger view structured mapping */}
-        <div className="overflow-x-auto border border-slate-900 rounded-lg">
-          <table className="w-full text-left border-collapse font-mono text-xs text-slate-300">
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor:'rgba(13,30,27,0.1)' }}>
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-[#0c1222] border-b border-slate-900 text-[10px] text-slate-500 uppercase tracking-widest font-black">
-                <th className="p-3">Tender ID</th>
-                <th className="p-3">Contractor / Agency</th>
-                <th className="p-3">Project Title</th>
-                <th className="p-3 text-right">Value (Cr)</th>
-                <th className="p-3 text-right">Paid (Cr)</th>
-                <th className="p-3 text-center">Fisc. Score</th>
-                <th className="p-3 text-center">Tether</th>
+              <tr style={{ background:T.creamDark, borderBottom:'1px solid rgba(13,30,27,0.1)' }}>
+                {['Tender ID','Contractor','Project Title','Value (Cr)','Paid (Cr)','Fisc. Score','Status'].map(h => (
+                  <th key={h} className="px-4 py-3 text-[9px] font-black uppercase tracking-wider" style={{ color:'rgba(13,30,27,0.45)', fontFamily:'monospace' }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-905">
+            <tbody>
               {filteredContracts.map(c => {
-                const isSelected = selectedContract?.id === c.id;
-                
-                let perfColor = 'text-emerald-450';
-                if (c.efficiencyScore < 70) perfColor = 'text-rose-550';
-                else if (c.efficiencyScore < 85) perfColor = 'text-amber-550';
-
+                const perfCol = c.efficiencyScore>=85?T.tealMid:c.efficiencyScore>=70?'#d97706':'#dc2626';
+                const stBg = c.status==='optimal'||c.status==='on-schedule'?'rgba(21,107,82,0.1)':c.status==='warning'?'#fef3c7':'#fee2e2';
+                const stCol = c.status==='optimal'||c.status==='on-schedule'?T.tealMid:c.status==='warning'?'#d97706':'#dc2626';
+                const sel = selectedContract?.id===c.id;
                 return (
-                  <tr 
-                    key={c.id}
-                    onClick={() => setSelectedContract(c)}
-                    className={`hover:bg-slate-900/60 transition-colors cursor-pointer ${
-                      isSelected ? 'bg-slate-900 text-white font-bold' : ''
-                    }`}
-                  >
-                    <td className="p-3 font-bold text-teal-450">{c.id}</td>
-                    <td className="p-3 text-slate-200">
-                      <div className="flex items-center gap-1.5">
-                        <Building size={12} className="text-slate-500" />
-                        {c.contractor}
-                      </div>
-                    </td>
-                    <td className="p-3 max-w-[200px] truncate text-slate-400">{c.name}</td>
-                    <td className="p-3 text-right text-slate-100 font-bold">{c.tenderValue.toFixed(2)} Cr</td>
-                    <td className="p-3 text-right text-emerald-450 font-bold">{c.amountDisbursed.toFixed(2)} Cr</td>
-                    <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 bg-[#070b13] border border-slate-805/45 rounded font-black ${perfColor}`}>
-                        {c.efficiencyScore}%
-                      </span>
-                    </td>
-                    <td className="p-3 text-center">
-                      <span className={`px-1.5 py-0.5 rounded text-[8.5px] uppercase font-bold text-white ${
-                        c.status === 'optimal' || c.status === 'on-schedule' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-900' :
-                        c.status === 'warning' ? 'bg-amber-950/80 text-amber-400 border border-amber-900' :
-                        'bg-red-950/80 text-rose-400 border border-red-900'
-                      }`}>
-                        {c.status}
-                      </span>
+                  <tr key={c.id} onClick={()=>setSelectedContract(c)} className="cursor-pointer transition-all border-b" style={{ borderColor:'rgba(13,30,27,0.06)', background:sel?'rgba(200,212,0,0.08)':'transparent' }}>
+                    <td className="px-4 py-3 font-black font-mono text-[11px]" style={{ color:T.tealMid }}>{c.id}</td>
+                    <td className="px-4 py-3 font-bold flex items-center gap-1.5" style={{ color:T.teal }}><Building size={12} style={{ color:'rgba(13,30,27,0.35)' }}/>{c.contractor}</td>
+                    <td className="px-4 py-3 max-w-[180px]" style={{ color:'rgba(13,30,27,0.55)' }}><span className="truncate block">{c.name}</span></td>
+                    <td className="px-4 py-3 font-bold text-right" style={{ color:T.teal }}>{c.tenderValue?.toFixed(2)} Cr</td>
+                    <td className="px-4 py-3 font-bold text-right" style={{ color:T.tealMid }}>{c.amountDisbursed?.toFixed(2)} Cr</td>
+                    <td className="px-4 py-3 text-center font-black font-mono" style={{ color:perfCol }}>{c.efficiencyScore}%</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded" style={{ color:stCol, background:stBg }}>{c.status}</span>
                     </td>
                   </tr>
                 );
               })}
-
-              {filteredContracts.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="text-center p-8 text-slate-500">
-                    No active tenders or contractors correspond to current filter parameters.
-                  </td>
-                </tr>
+              {filteredContracts.length===0 && (
+                <tr><td colSpan={7} className="text-center py-8 text-sm" style={{ color:'rgba(13,30,27,0.35)' }}>No tenders match current filters.</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Selected Tender Audit Inspector details */}
+        {/* Selected Contract Detail */}
         {selectedContract && (
-          <div className="bg-[#0c1222] border border-slate-900 rounded-lg p-4.5 mt-5 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-120">
+          <div className="mt-5 p-5 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn" style={{ background:T.teal }}>
             <div>
-              <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest block font-mono">TENDER IDENTIFIER</span>
-              <h4 className="text-sm font-black text-slate-205 mt-1">{selectedContract.id}</h4>
-              <p className="text-xs text-slate-450 leading-relaxed font-sans mt-1.5">
-                Targeted sector corridor is **{selectedContract.sector}**. Registered deployment under ID **{selectedContract.id}** handles regional road upgrades.
-              </p>
+              <span className="text-[9px] font-black uppercase tracking-widest block mb-2 font-mono" style={{ color:'rgba(200,212,0,0.6)' }}>TENDER IDENTIFIER</span>
+              <h4 className="text-lg font-black uppercase mb-1" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'#fff' }}>{selectedContract.id}</h4>
+              <p className="text-xs leading-relaxed" style={{ color:'rgba(255,255,255,0.5)' }}>Sector {selectedContract.sector} — handles regional road upgrades under tender {selectedContract.id}.</p>
             </div>
-
-            <div className="border-t md:border-t-0 md:border-l border-slate-900 pt-4 md:pt-0 md:pl-5 space-y-2">
-              <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest block font-mono">FINANCIAL AUDIT BALANCE</span>
+            <div className="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 space-y-3" style={{ borderColor:'rgba(255,255,255,0.1)' }}>
+              <span className="text-[9px] font-black uppercase tracking-widest block font-mono" style={{ color:'rgba(200,212,0,0.6)' }}>FINANCIAL AUDIT BALANCE</span>
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-450 block text-[9.5px]">Tender Approved Value</span>
-                  <span className="font-bold text-white">{selectedContract.tenderValue.toFixed(2)} Cr</span>
-                </div>
-                <div>
-                  <span className="text-slate-450 block text-[9.5px]">Amount Disbursed</span>
-                  <span className="font-bold text-white">{selectedContract.amountDisbursed.toFixed(2)} Cr</span>
-                </div>
-                <div>
-                  <span className="text-slate-450 block text-[9.5px]">Available Funds Pool</span>
-                  <span className="font-bold text-teal-400">{selectedContract.remainingBudget?.toFixed(2) || (selectedContract.budgetAllocated - selectedContract.amountDisbursed).toFixed(2)} Cr</span>
-                </div>
-                <div>
-                  <span className="text-slate-450 block text-[9.5px]">Budget Allocated</span>
-                  <span className="font-bold text-white">{selectedContract.budgetAllocated.toFixed(2)} Cr</span>
-                </div>
+                {[
+                  { l:'Tender Value', v:`${selectedContract.tenderValue?.toFixed(2)} Cr` },
+                  { l:'Disbursed', v:`${selectedContract.amountDisbursed?.toFixed(2)} Cr` },
+                  { l:'Remaining', v:`${(selectedContract.budgetAllocated-selectedContract.amountDisbursed).toFixed(2)} Cr` },
+                  { l:'Budget Allocated', v:`${selectedContract.budgetAllocated?.toFixed(2)} Cr` },
+                ].map(f => (
+                  <div key={f.l}>
+                    <span className="block text-[9px]" style={{ color:'rgba(255,255,255,0.4)' }}>{f.l}</span>
+                    <span className="font-bold text-white">{f.v}</span>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="border-t md:border-t-0 md:border-l border-slate-900 pt-4 md:pt-0 md:pl-5 flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest block font-mono">QUALITY SCHEDULE METRICS</span>
-                <div className="flex justify-between text-xs mt-2 font-mono">
-                  <span className="text-slate-400">Target Completion Date:</span>
-                  <span className="text-slate-200 font-bold">{selectedContract.targetCompletion || "2026-08-30"}</span>
-                </div>
-                <div className="flex justify-between text-xs mt-1 font-mono">
-                  <span className="text-slate-400">Quality Index Standard:</span>
-                  <span className="text-emerald-400 font-bold">{selectedContract.qualityIndex || "98%"}</span>
-                </div>
+            <div className="border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-6 flex flex-col justify-between" style={{ borderColor:'rgba(255,255,255,0.1)' }}>
+              <div className="space-y-2 text-xs">
+                <span className="text-[9px] font-black uppercase tracking-widest block font-mono" style={{ color:'rgba(200,212,0,0.6)' }}>SCHEDULE METRICS</span>
+                <div className="flex justify-between"><span style={{ color:'rgba(255,255,255,0.45)' }}>Target Completion:</span><span className="font-bold text-white">{selectedContract.targetCompletion||'2026-08-30'}</span></div>
+                <div className="flex justify-between"><span style={{ color:'rgba(255,255,255,0.45)' }}>Quality Index:</span><span className="font-bold" style={{ color:T.yellow }}>{selectedContract.qualityIndex||'98%'}</span></div>
               </div>
-              <div className="pt-3">
-                <button 
-                  onClick={() => alert(`Issuing a formal administrative compliance query to ${selectedContract.contractor} regarding tender ${selectedContract.id}...`)}
-                  className="cursor-pointer text-[10px] w-full uppercase tracking-wider font-extrabold bg-[#2ea014] hover:bg-[#258210] py-1.5 rounded text-white transition-colors"
-                >
-                  Issue Performance Query
-                </button>
-              </div>
+              <button onClick={()=>alert(`Issuing compliance query to ${selectedContract.contractor}...`)} className="mt-4 w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all hover:scale-[1.01]" style={{ background:T.yellow, color:T.teal, fontFamily:"'Barlow Condensed',sans-serif" }}>
+                Issue Performance Query →
+              </button>
             </div>
           </div>
         )}

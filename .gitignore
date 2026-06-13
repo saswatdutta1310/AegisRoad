@@ -1,28 +1,36 @@
-# Environment
+# ── Environment ──────────────────────────────────────────
 .env
 backend/.env
 Frontend/.env
 
-# Python
+# ── Python ───────────────────────────────────────────────
 **/__pycache__/
 *.py[cod]
+*.pyc
 *.egg-info/
 .venv/
 venv/
+*.sqlite3
 
-# Node
+# ── Node ─────────────────────────────────────────────────
 **/node_modules/
 Frontend/dist/
+Frontend/build/
+Frontend/coverage/
+*.log
+npm-debug.log*
 
-# Database (regenerated locally)
+# ── Database (regenerated locally) ───────────────────────
 backend/aegisroad.db
+*.db
 
-# Build output
-Frontend/dist/
-
-# IDE (optional local settings)
+# ── IDE / Editor ─────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
 
-# OS
+# ── OS ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini

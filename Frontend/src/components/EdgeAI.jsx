@@ -1,503 +1,267 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { inferenceApi, hazardApi } from '../services/api';
 
+const T = { teal:'#072E24', tealMid:'#156B52', yellow:'#C8D400', cream:'#F4F0E6', creamDark:'#EAE5D6', textDark:'#0D1E1B' };
+
 const CLASS_INFO = {
-  D00: { label: 'Longitudinal Crack',  color: '#fbbf24', severity: 'Low' },
-  D10: { label: 'Transverse Crack',    color: '#f97316', severity: 'Medium' },
-  D20: { label: 'Alligator Cracking',  color: '#ef4444', severity: 'High' },
-  D40: { label: 'Pothole',             color: '#dc2626', severity: 'Critical' },
-  D43: { label: 'Surface Damage',      color: '#f97316', severity: 'Medium' },
-  D44: { label: 'Cross-walk Blur',     color: '#fbbf24', severity: 'Low' },
-  D50: { label: 'Manhole Cover',       color: '#a78bfa', severity: 'Low' },
+  D00: { label:'Longitudinal Crack', color:'#d97706', severity:'Low' },
+  D10: { label:'Transverse Crack',   color:'#ea580c', severity:'Medium' },
+  D20: { label:'Alligator Cracking', color:'#dc2626', severity:'High' },
+  D40: { label:'Pothole',            color:'#991b1b', severity:'Critical' },
+  D43: { label:'Surface Damage',     color:'#ea580c', severity:'Medium' },
+  D44: { label:'Cross-walk Blur',    color:'#d97706', severity:'Low' },
+  D50: { label:'Manhole Cover',      color:'#7c3aed', severity:'Low' },
 };
 
 function getClassInfo(cls) {
   if (CLASS_INFO[cls]) return CLASS_INFO[cls];
-  const digit    = parseInt(cls.replace(/\D/g, '').slice(-1), 10);
-  const severity = digit >= 5 ? 'Critical' : digit >= 3 ? 'High' : digit >= 1 ? 'Medium' : 'Low';
-  const colors   = { Low: '#fbbf24', Medium: '#f97316', High: '#ef4444', Critical: '#dc2626' };
-  return { label: cls.replace(/([A-Z])(\d)/, '$1 $2'), color: colors[severity], severity };
+  const d = parseInt(cls.replace(/\D/g,'').slice(-1),10);
+  const s = d>=5?'Critical':d>=3?'High':d>=1?'Medium':'Low';
+  const c = {Low:'#d97706',Medium:'#ea580c',High:'#dc2626',Critical:'#991b1b'};
+  return { label:cls.replace(/([A-Z])(\d)/,'$1 $2'), color:c[s], severity:s };
 }
 
-const DEMO_RESULT = {
-  detections: [
-    { class: 'D40', confidence: 0.91, bbox: [120, 200, 280, 320] },
-    { class: 'D10', confidence: 0.74, bbox: [340, 150, 180, 90]  },
-  ],
-  inference_ms: 43,
-  model: 'YOLOv8-Nano (demo mode)',
+const DEMO = {
+  detections:[{class:'D40',confidence:0.91,bbox:[120,200,280,320]},{class:'D10',confidence:0.74,bbox:[340,150,180,90]}],
+  inference_ms:43, model:'YOLOv8-Nano (demo mode)',
 };
 
-async function reverseGeocode(lat, lng) {
+async function reverseGeocode(lat,lng) {
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'AegisRoad/1.0' } }
-    );
-    const data = await res.json();
-    return (
-      data.address?.road          ||
-      data.address?.suburb        ||
-      data.address?.city_district ||
-      data.address?.city          ||
-      `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-    );
-  } catch {
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  }
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,{headers:{'Accept-Language':'en','User-Agent':'AegisRoad/1.0'}});
+    const d = await r.json();
+    return d.address?.road||d.address?.suburb||d.address?.city_district||d.address?.city||`${lat.toFixed(4)},${lng.toFixed(4)}`;
+  } catch { return `${lat.toFixed(4)},${lng.toFixed(4)}`; }
 }
 
+const card = { background:'#FFFFFF', border:'1px solid rgba(13,30,27,0.1)', borderRadius:'16px', padding:'24px' };
+
 export default function EdgeAI() {
-  const [file, setFile]         = useState(null);
-  const [preview, setPreview]   = useState(null);
-  const [result, setResult]     = useState(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState(null);
-  const [reported, setReported] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [autoPinned, setAutoPinned] = useState(false);
+  const [file,setFile]=useState(null);
+  const [preview,setPreview]=useState(null);
+  const [result,setResult]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(null);
+  const [reported,setReported]=useState(false);
+  const [dragOver,setDragOver]=useState(false);
+  const [autoPinned,setAutoPinned]=useState(false);
+  const [gpsPos,setGpsPos]=useState(null);
+  const [gpsStatus,setGpsStatus]=useState('idle');
+  const [roadName,setRoadName]=useState(null);
+  const [gpsError,setGpsError]=useState(null);
+  const [gpsAccuracy,setGpsAccuracy]=useState(null);
+  const watchRef=useRef(); const fileRef=useRef();
 
-  // GPS state
-  const [gpsPos, setGpsPos]       = useState(null);
-  const [gpsStatus, setGpsStatus] = useState('idle');
-  const [roadName, setRoadName]   = useState(null);
-  const [gpsError, setGpsError]   = useState(null);
-  const [gpsAccuracy, setGpsAccuracy] = useState(null);
-  const watchRef = useRef(null);
-  const fileRef  = useRef();
-
-  // Start GPS on mount
   useEffect(() => {
-    const isSecure =
-      window.location.protocol === 'https:' ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
-
-    if (!isSecure) {
-      setGpsStatus('error');
-      setGpsError('GPS requires HTTPS. Access via localhost or the live Vercel URL.');
-      return;
-    }
-    if (!navigator.geolocation) {
-      setGpsStatus('error');
-      setGpsError('GPS not available on this device');
-      return;
-    }
-
+    const isSecure=window.location.protocol==='https:'||['localhost','127.0.0.1'].includes(window.location.hostname);
+    if (!isSecure){setGpsStatus('error');setGpsError('GPS requires HTTPS.');return;}
+    if (!navigator.geolocation){setGpsStatus('error');setGpsError('GPS not available on this device');return;}
     setGpsStatus('fetching');
-    watchRef.current = navigator.geolocation.watchPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-        setGpsPos({ lat, lng });
-        setGpsAccuracy(Math.round(accuracy));
-        setGpsStatus('ok');
-        setGpsError(null);
-        const name = await reverseGeocode(lat, lng);
-        setRoadName(name);
-      },
-      (err) => {
-        setGpsStatus('error');
-        setGpsError(
-          err.code === 1 ? 'Location permission denied. Please allow access in browser settings.' :
-          err.code === 2 ? 'Position unavailable. Check device GPS.' :
-          'GPS timed out. Try again.'
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    watchRef.current=navigator.geolocation.watchPosition(
+      async pos=>{const{latitude:lat,longitude:lng,accuracy}=pos.coords;setGpsPos({lat,lng});setGpsAccuracy(Math.round(accuracy));setGpsStatus('ok');setGpsError(null);const n=await reverseGeocode(lat,lng);setRoadName(n);},
+      err=>{setGpsStatus('error');setGpsError(err.code===1?'Location permission denied.':err.code===2?'Position unavailable.':'GPS timed out.');},
+      {enableHighAccuracy:true,timeout:10000,maximumAge:5000}
     );
-    return () => {
-      if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current);
-    };
-  }, []);
+    return ()=>{if(watchRef.current)navigator.geolocation.clearWatch(watchRef.current);};
+  },[]);
 
-  // Auto-pin to map when result arrives + GPS is ready
-  useEffect(() => {
-    if (result && gpsStatus === 'ok' && gpsPos && !autoPinned && result.detections?.length > 0) {
-      autoPinHazard();
-    }
-  }, [result, gpsStatus, gpsPos]);
+  useEffect(()=>{if(result&&gpsStatus==='ok'&&gpsPos&&!autoPinned&&result.detections?.length>0)autoPinHazard();},[result,gpsStatus,gpsPos]);
 
-  const handleFile = useCallback((incoming) => {
-    if (!incoming || !incoming.type.startsWith('image/')) return;
-    setFile(incoming);
-    setPreview(URL.createObjectURL(incoming));
-    setResult(null);
-    setError(null);
-    setReported(false);
-    setAutoPinned(false);
-  }, []);
+  const handleFile=useCallback(f=>{if(!f||!f.type.startsWith('image/'))return;setFile(f);setPreview(URL.createObjectURL(f));setResult(null);setError(null);setReported(false);setAutoPinned(false);},[]);
 
-  function handleDrop(e) {
-    e.preventDefault();
-    setDragOver(false);
-    handleFile(e.dataTransfer.files[0]);
-  }
+  function handleDrop(e){e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}
 
-  async function runInference() {
-    if (!file) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await inferenceApi.predict(file);
-      setResult(data);
-    } catch {
-      setResult(DEMO_RESULT);
-      setError('⚠️ Inference server not connected — showing demo result');
-    }
-    setLoading(false);
-  }
+  async function runInference(){if(!file)return;setLoading(true);setError(null);try{const d=await inferenceApi.predict(file);setResult(d);}catch{setResult(DEMO);setError('⚠️ Inference server not connected — showing demo result');}setLoading(false);}
 
-  // Auto-pin silently (no button needed)
-  async function autoPinHazard() {
-    if (!result?.detections?.length || !gpsPos) return;
-    const top  = result.detections[0];
-    const info = getClassInfo(top.class);
-    const resolvedRoadName = roadName || `${gpsPos.lat.toFixed(4)}, ${gpsPos.lng.toFixed(4)}`;
-    try {
-      await hazardApi.create({
-        road_name:   resolvedRoadName,
-        location:    resolvedRoadName,
-        lat:         gpsPos.lat,
-        lng:         gpsPos.lng,
-        coordinates: { lat: gpsPos.lat, lng: gpsPos.lng },
-        cls:         top.class,
-        title:       `${info.label} detected via Dashcam`,
-        severity:    info.severity.toLowerCase(),
-        contractor:  null,
-        source:      'edge_ai_auto',
-        confidence:  top.confidence,
-      });
-    } catch { /* silent — demo mode */ }
-    setAutoPinned(true);
-  }
+  async function autoPinHazard(){if(!result?.detections?.length||!gpsPos)return;const top=result.detections[0];const info=getClassInfo(top.class);const rn=roadName||`${gpsPos.lat.toFixed(4)},${gpsPos.lng.toFixed(4)}`;try{await hazardApi.create({road_name:rn,location:rn,lat:gpsPos.lat,lng:gpsPos.lng,coordinates:{lat:gpsPos.lat,lng:gpsPos.lng},cls:top.class,title:`${info.label} detected via Dashcam`,severity:info.severity.toLowerCase(),contractor:null,source:'edge_ai_auto',confidence:top.confidence});}catch{}setAutoPinned(true);}
 
-  async function reportHazard() {
-    if (!result?.detections?.length) return;
-    if (!gpsPos) {
-      setError('❌ GPS location not available — cannot pin hazard on map.');
-      return;
-    }
-    const top  = result.detections[0];
-    const info = getClassInfo(top.class);
-    const resolvedRoadName = roadName || `${gpsPos.lat.toFixed(4)}, ${gpsPos.lng.toFixed(4)}`;
-    try {
-      await hazardApi.create({
-        road_name:   resolvedRoadName,
-        location:    resolvedRoadName,
-        lat:         gpsPos.lat,
-        lng:         gpsPos.lng,
-        coordinates: { lat: gpsPos.lat, lng: gpsPos.lng },
-        cls:         top.class,
-        title:       `${info.label} detected via Dashcam`,
-        severity:    info.severity.toLowerCase(),
-        contractor:  null,
-        source:      'edge_ai',
-        confidence:  top.confidence,
-      });
-    } catch { /* demo mode */ }
-    setReported(true);
-  }
+  async function reportHazard(){if(!result?.detections?.length)return;if(!gpsPos){setError('❌ GPS location not available — cannot pin hazard on map.');return;}const top=result.detections[0];const info=getClassInfo(top.class);const rn=roadName||`${gpsPos.lat.toFixed(4)},${gpsPos.lng.toFixed(4)}`;try{await hazardApi.create({road_name:rn,location:rn,lat:gpsPos.lat,lng:gpsPos.lng,coordinates:{lat:gpsPos.lat,lng:gpsPos.lng},cls:top.class,title:`${info.label} detected via Dashcam`,severity:info.severity.toLowerCase(),contractor:null,source:'edge_ai',confidence:top.confidence});}catch{}setReported(true);}
 
-  // ── GPS block color config ─────────────────────────────────────────────────
-  const gpsConfig = {
-    idle:     { border: '#3a3f58', bg: '#22263a',  labelColor: '#9099b2', valueColor: '#9099b2' },
-    fetching: { border: '#4f46e5', bg: '#1e1b4b',  labelColor: '#a5b4fc', valueColor: '#a5b4fc' },
-    ok:       { border: '#16a34a', bg: '#052e16',  labelColor: '#6ee7b7', valueColor: '#ffffff' },
-    error:    { border: '#dc2626', bg: '#450a0a',  labelColor: '#f87171', valueColor: '#fca5a5' },
-  }[gpsStatus];
-
-  const accuracyColor =
-    !gpsAccuracy ? '#9099b2' :
-    gpsAccuracy < 20  ? '#6ee7b7' :
-    gpsAccuracy < 50  ? '#fbbf24' : '#f87171';
+  const gpsCol = gpsStatus==='ok'?T.tealMid:gpsStatus==='fetching'?'#7c3aed':gpsStatus==='error'?'#dc2626':'rgba(13,30,27,0.4)';
+  const accCol = !gpsAccuracy?'rgba(13,30,27,0.4)':gpsAccuracy<20?T.tealMid:gpsAccuracy<50?'#d97706':'#dc2626';
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-4">
+    <div className="animate-fadeIn">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="section-eyebrow mb-1">YOLOv8-Nano</div>
+        <h1 className="text-[clamp(28px,4vw,44px)] font-black uppercase leading-tight" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal }}>
+          Edge AI — Hazard Detector
+        </h1>
+        <p className="text-sm mt-1" style={{ color:'rgba(13,30,27,0.5)' }}>Upload a dashcam frame · YOLOv8-Nano inference · auto-pin to live map</p>
+      </div>
 
-      {/* ── LEFT: Upload + GPS ──────────────────────────────────────────── */}
-      <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-5">
-
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">🤖</span>
-          <div>
-            <h2 className="text-xl font-bold text-white">Edge AI — Hazard Detector</h2>
-            <p className="text-sm text-slate-400">Upload a dashcam frame · YOLOv8-Nano inference · auto-pin to map</p>
-          </div>
-        </div>
-
-        {/* ── GPS LOCATION BLOCK ─────────────────────────────────────────── */}
-        <div style={{
-          borderRadius: 12,
-          border: `1.5px solid ${gpsConfig.border}`,
-          background: gpsConfig.bg,
-          padding: '14px 16px',
-          transition: 'all 0.3s ease',
-        }}>
-          {/* Block header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>
-                {gpsStatus === 'ok' ? '📍' : gpsStatus === 'fetching' ? '🔄' : gpsStatus === 'error' ? '❌' : '📡'}
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: gpsConfig.labelColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Live GPS Location
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {gpsStatus === 'fetching' && (
-                <div style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid #4f46e5', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
-              )}
-              {gpsStatus === 'ok' && (
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#6ee7b7', animation: 'gps-ping 1.5s infinite' }} />
-              )}
-              <span style={{ fontSize: 10, fontWeight: 700, color: gpsConfig.labelColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {gpsStatus === 'ok' ? 'LIVE' : gpsStatus === 'fetching' ? 'ACQUIRING' : gpsStatus === 'error' ? 'ERROR' : 'IDLE'}
-              </span>
-            </div>
-          </div>
-
-          {/* Coordinates display */}
-          {gpsPos ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {/* Latitude */}
-              <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: 9, color: '#9099b2', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4, fontWeight: 600 }}>Latitude</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: gpsConfig.valueColor, fontFamily: 'monospace', letterSpacing: '-0.5px' }}>
-                  {gpsPos.lat.toFixed(6)}
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* ── LEFT: Upload + GPS ──────────────────────────────── */}
+        <div className="flex flex-col gap-5">
+          {/* GPS Block */}
+          <div className="rounded-2xl p-4" style={{ background:'#FFFFFF', border:`2px solid ${gpsCol}22` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{gpsStatus==='ok'?'📍':gpsStatus==='fetching'?'🔄':gpsStatus==='error'?'❌':'📡'}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color:'rgba(13,30,27,0.5)', fontFamily:'monospace' }}>Live GPS Location</span>
               </div>
-              {/* Longitude */}
-              <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '10px 12px' }}>
-                <div style={{ fontSize: 9, color: '#9099b2', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4, fontWeight: 600 }}>Longitude</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: gpsConfig.valueColor, fontFamily: 'monospace', letterSpacing: '-0.5px' }}>
-                  {gpsPos.lng.toFixed(6)}
-                </div>
+              <div className="flex items-center gap-2">
+                {gpsStatus==='fetching'&&<div className="w-3 h-3 rounded-full border-2" style={{ borderColor:`${T.tealMid}44`, borderTopColor:T.tealMid, animation:'spin 0.8s linear infinite' }}/>}
+                {gpsStatus==='ok'&&<div className="w-2 h-2 rounded-full animate-pulse" style={{ background:T.tealMid }}/>}
+                <span className="text-[9px] font-black uppercase" style={{ color:gpsCol, fontFamily:'monospace' }}>{gpsStatus==='ok'?'LIVE':gpsStatus==='fetching'?'ACQUIRING':gpsStatus==='error'?'ERROR':'IDLE'}</span>
               </div>
-              {/* Road name + accuracy */}
-              <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 11, color: '#9099b2', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
-                  {roadName ? `📌 ${roadName}` : '⏳ Resolving road name...'}
-                </div>
-                {gpsAccuracy && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: accuracyColor, whiteSpace: 'nowrap' }}>
-                    ±{gpsAccuracy}m
+            </div>
+            {gpsPos ? (
+              <div className="grid grid-cols-2 gap-2">
+                {[['Latitude',gpsPos.lat.toFixed(6)],['Longitude',gpsPos.lng.toFixed(6)]].map(([l,v])=>(
+                  <div key={l} className="p-2.5 rounded-xl" style={{ background:T.creamDark }}>
+                    <div className="text-[8px] font-black uppercase tracking-wider mb-0.5" style={{ color:'rgba(13,30,27,0.4)', fontFamily:'monospace' }}>{l}</div>
+                    <div className="text-sm font-black font-mono" style={{ color:T.teal }}>{v}</div>
                   </div>
-                )}
+                ))}
+                <div className="col-span-2 flex justify-between items-center p-2.5 rounded-xl" style={{ background:T.creamDark }}>
+                  <span className="text-[11px] truncate" style={{ color:'rgba(13,30,27,0.55)' }}>{roadName?`📌 ${roadName}`:'⏳ Resolving road name...'}</span>
+                  {gpsAccuracy&&<span className="text-xs font-black ml-2 shrink-0" style={{ color:accCol }}>±{gpsAccuracy}m</span>}
+                </div>
               </div>
-            </div>
-          ) : gpsStatus === 'error' ? (
-            <div style={{ fontSize: 12, color: '#fca5a5', lineHeight: 1.5 }}>
-              {gpsError}
-              <button
-                onClick={() => { setGpsStatus('fetching'); setGpsError(null); }}
-                style={{ display: 'block', marginTop: 8, padding: '5px 12px', borderRadius: 6, border: 'none', background: '#4f8ef7', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-              >
-                Retry GPS
-              </button>
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: gpsConfig.labelColor, padding: '4px 0' }}>
-              {gpsStatus === 'fetching' ? '⏳ Acquiring GPS signal — this takes a few seconds...' : 'GPS not started'}
-            </div>
-          )}
-        </div>
-        {/* ── END GPS BLOCK ─────────────────────────────────────────────── */}
-
-        {/* Drop zone */}
-        <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-            dragOver ? 'border-[#2ea014] bg-[#2ea014]/10' : 'border-slate-700 bg-slate-800/50 hover:bg-slate-800'
-          }`}
-          onClick={() => fileRef.current.click()}
-          onDrop={handleDrop}
-          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-        >
-          {preview ? (
-            <img src={preview} className="max-h-64 mx-auto rounded-lg object-contain" alt="dashcam frame" />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 gap-2">
-              <span className="text-4xl mb-2">📷</span>
-              <span className="text-slate-300 font-medium">Drop dashcam image here</span>
-              <span className="text-xs text-slate-500">or click to browse · JPG / PNG</span>
-              {gpsStatus === 'ok' && (
-                <span className="text-xs text-emerald-400 mt-1">📍 GPS ready — hazard will auto-pin on detection</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <input ref={fileRef} type="file" accept="image/*" className="hidden"
-          onChange={e => handleFile(e.target.files[0])} />
-
-        {file && (
-          <p className="text-sm text-slate-300 bg-slate-800 p-2 rounded">
-            📎 {file.name} · {(file.size / 1024).toFixed(1)} KB
-          </p>
-        )}
-
-        {error && (
-          <p className="text-sm text-amber-400 bg-amber-400/10 p-3 rounded-lg border border-amber-400/20">{error}</p>
-        )}
-
-        {/* Auto-pin success notice */}
-        {autoPinned && (
-          <div className="p-3 bg-emerald-900/40 border border-emerald-500/50 rounded-lg text-emerald-400 text-sm font-medium flex items-center gap-2">
-            <span>✅</span>
-            <span>Auto-pinned to Public Map at {gpsPos?.lat.toFixed(5)}, {gpsPos?.lng.toFixed(5)}</span>
+            ) : gpsStatus==='error' ? (
+              <div>
+                <p className="text-sm mb-2" style={{ color:'#dc2626' }}>{gpsError}</p>
+                <button onClick={()=>{setGpsStatus('fetching');setGpsError(null);}} className="text-xs font-black uppercase px-3 py-1.5 rounded-lg cursor-pointer" style={{ background:T.teal, color:T.yellow, fontFamily:"'Barlow Condensed',sans-serif" }}>Retry GPS</button>
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color:'rgba(13,30,27,0.5)' }}>{gpsStatus==='fetching'?'⏳ Acquiring GPS signal...':'GPS not started'}</p>
+            )}
           </div>
-        )}
 
-        {/* Buttons */}
-        <div className="flex flex-col gap-3">
-          <button
-            className="w-full bg-[#2ea014] hover:bg-[#258210] disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-            onClick={runInference}
-            disabled={!file || loading}
+          {/* Drop zone */}
+          <div
+            className="rounded-2xl p-8 text-center cursor-pointer transition-all"
+            style={{ border:`2px dashed ${dragOver?T.teal:'rgba(13,30,27,0.2)'}`, background:dragOver?'rgba(7,46,36,0.06)':'#FFFFFF', minHeight:'200px', display:'flex', alignItems:'center', justifyContent:'center' }}
+            onClick={()=>fileRef.current.click()}
+            onDrop={handleDrop}
+            onDragOver={e=>{e.preventDefault();setDragOver(true);}}
+            onDragLeave={()=>setDragOver(false)}
           >
-            {loading ? (
-              <>
-                <span style={{ display:'inline-block', width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
-                Analysing...
-              </>
-            ) : '🔍 Detect Hazards'}
-          </button>
+            {preview ? (
+              <img src={preview} className="max-h-56 mx-auto rounded-xl object-contain" alt="dashcam frame" />
+            ) : (
+              <div className="space-y-2">
+                <span className="text-4xl block">📷</span>
+                <p className="text-sm font-bold" style={{ color:T.teal }}>Drop dashcam image here</p>
+                <p className="text-xs" style={{ color:'rgba(13,30,27,0.4)' }}>or click to browse · JPG / PNG</p>
+                {gpsStatus==='ok'&&<p className="text-xs font-bold" style={{ color:T.tealMid }}>📍 GPS ready — hazard will auto-pin on detection</p>}
+              </div>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e=>handleFile(e.target.files[0])} />
 
-          {result && !reported && (
-            <button
-              className={`w-full font-bold py-3 px-4 rounded-lg transition-colors text-white ${
-                gpsStatus === 'ok'
-                  ? 'bg-rose-600 hover:bg-rose-700'
-                  : 'bg-slate-700 cursor-not-allowed opacity-60'
-              }`}
-              onClick={reportHazard}
-              disabled={gpsStatus !== 'ok'}
-              title={gpsStatus !== 'ok' ? 'Waiting for GPS fix before reporting' : ''}
-            >
-              {gpsStatus === 'ok' ? '🚨 Report to Authorities' : '⏳ Waiting for GPS fix...'}
+          {file && <p className="text-xs font-mono p-2.5 rounded-xl" style={{ background:T.creamDark, color:T.teal }}>📎 {file.name} · {(file.size/1024).toFixed(1)} KB</p>}
+          {error && <p className="text-sm p-3 rounded-xl border" style={{ color:'#d97706', background:'#fef3c7', borderColor:'#fde68a' }}>{error}</p>}
+          {autoPinned && (
+            <div className="p-3 rounded-xl border flex items-center gap-2 text-sm font-bold" style={{ color:T.tealMid, background:'rgba(21,107,82,0.08)', borderColor:'rgba(21,107,82,0.2)' }}>
+              ✅ Auto-pinned at {gpsPos?.lat.toFixed(5)}, {gpsPos?.lng.toFixed(5)}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-3">
+            <button onClick={runInference} disabled={!file||loading} className="w-full py-3.5 rounded-2xl text-sm font-black uppercase tracking-wider cursor-pointer disabled:opacity-40 transition-all hover:scale-[1.01] flex items-center justify-center gap-2" style={{ background:T.teal, color:T.yellow, fontFamily:"'Barlow Condensed',sans-serif" }}>
+              {loading ? (
+                <><div className="w-4 h-4 rounded-full border-2" style={{ borderColor:`${T.yellow}44`, borderTopColor:T.yellow, animation:'spin 0.8s linear infinite' }}/>Analysing...</>
+              ) : '🔍 Detect Hazards'}
             </button>
-          )}
-
-          {reported && (
-            <div className="w-full bg-emerald-900/50 border border-emerald-500/50 text-emerald-400 font-medium py-3 px-4 rounded-lg text-center">
-              ✅ Hazard logged at {gpsPos?.lat.toFixed(4)}, {gpsPos?.lng.toFixed(4)} · SLA timer started
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── RIGHT: Results ──────────────────────────────────────────────── */}
-      <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-6">
-        <h3 className="text-lg font-bold text-white mb-6 pb-2 border-b border-slate-800">Detection Results</h3>
-
-        {!result && !loading && (
-          <div className="flex flex-col items-center justify-center h-48 text-center text-slate-500 gap-3">
-            <span className="text-4xl opacity-50">🛣️</span>
-            <p>Upload an image and click<br />"Detect Hazards"</p>
-          </div>
-        )}
-
-        {loading && (
-          <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
-            <div className="w-8 h-8 border-4 border-[#2ea014] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-300 font-medium">Running YOLOv8-Nano…</p>
-            <p className="text-xs text-slate-500">Sending frame to HF Space</p>
-          </div>
-        )}
-
-        {result && !loading && (
-          <div className="space-y-6">
-            <div className="flex gap-2 flex-wrap">
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 text-xs font-mono border border-slate-700">⚡ {result.inference_ms}ms</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 text-xs font-mono border border-slate-700">{result.detections?.length ?? 0} detection(s)</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 text-xs font-mono border border-slate-700">🤖 {result.model}</span>
-            </div>
-
-            {result.detections?.length === 0 && (
-              <div className="p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-lg text-emerald-400">
-                ✅ No damage detected in this frame
+            {result && !reported && (
+              <button onClick={reportHazard} disabled={gpsStatus!=='ok'} className="w-full py-3 rounded-2xl text-sm font-black uppercase tracking-wider cursor-pointer disabled:opacity-50 transition-all" style={{ background:gpsStatus==='ok'?'#dc2626':'rgba(13,30,27,0.1)', color:'#fff', fontFamily:"'Barlow Condensed',sans-serif" }}>
+                {gpsStatus==='ok'?'🚨 Report to Authorities':'⏳ Waiting for GPS fix...'}
+              </button>
+            )}
+            {reported && (
+              <div className="w-full py-3 rounded-2xl text-sm font-bold text-center" style={{ background:'rgba(21,107,82,0.1)', color:T.tealMid, border:`1px solid rgba(21,107,82,0.2)` }}>
+                ✅ Hazard logged at {gpsPos?.lat.toFixed(4)}, {gpsPos?.lng.toFixed(4)} · SLA timer started
               </div>
             )}
+          </div>
+        </div>
 
-            <div className="space-y-3">
-              {result.detections?.map((d, i) => {
-                const info = getClassInfo(d.class);
-                const pct  = Math.round(d.confidence * 100);
-                return (
-                  <div key={i} className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: info.color }}></div>
-                    <div className="flex justify-between items-center mb-2 pl-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm" style={{ color: info.color }}>{d.class}</span>
-                        <span className="text-slate-300 text-sm font-medium">{info.label}</span>
+        {/* ── RIGHT: Results ────────────────────────────────── */}
+        <div style={card}>
+          <h3 className="text-lg font-black uppercase mb-5 pb-3 border-b" style={{ fontFamily:"'Barlow Condensed',sans-serif", color:T.teal, borderColor:'rgba(13,30,27,0.08)' }}>Detection Results</h3>
+
+          {!result && !loading && (
+            <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
+              <span className="text-4xl opacity-30">🛣️</span>
+              <p className="text-sm" style={{ color:'rgba(13,30,27,0.4)' }}>Upload an image and click "Detect Hazards"</p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-48 gap-3">
+              <div className="w-8 h-8 rounded-full border-4" style={{ borderColor:`${T.tealMid}33`, borderTopColor:T.tealMid, animation:'spin 0.8s linear infinite' }}/>
+              <p className="text-sm font-bold" style={{ color:T.teal }}>Running YOLOv8-Nano…</p>
+              <p className="text-xs" style={{ color:'rgba(13,30,27,0.4)' }}>Sending frame to HF Space</p>
+            </div>
+          )}
+
+          {result && !loading && (
+            <div className="space-y-5">
+              <div className="flex gap-2 flex-wrap">
+                {[`⚡ ${result.inference_ms}ms`,`${result.detections?.length??0} detection(s)`,`🤖 ${result.model}`].map(t=>(
+                  <span key={t} className="text-[10px] font-bold px-2.5 py-1 rounded-lg" style={{ background:T.creamDark, color:T.teal, fontFamily:'monospace' }}>{t}</span>
+                ))}
+              </div>
+
+              {result.detections?.length===0 && (
+                <div className="p-4 rounded-xl font-bold" style={{ background:'rgba(21,107,82,0.08)', color:T.tealMid, border:`1px solid rgba(21,107,82,0.2)` }}>✅ No damage detected in this frame</div>
+              )}
+
+              <div className="space-y-3">
+                {result.detections?.map((d,i)=>{
+                  const info=getClassInfo(d.class);
+                  const pct=Math.round(d.confidence*100);
+                  return (
+                    <div key={i} className="p-4 rounded-xl relative overflow-hidden border" style={{ background:T.creamDark, borderColor:'rgba(13,30,27,0.08)', borderLeft:`4px solid ${info.color}` }}>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-sm" style={{ color:info.color }}>{d.class}</span>
+                          <span className="font-bold text-sm" style={{ color:T.teal }}>{info.label}</span>
+                        </div>
+                        <span className="font-mono font-black text-sm" style={{ color:info.color }}>{pct}%</span>
                       </div>
-                      <span className="font-mono text-sm font-bold" style={{ color: info.color }}>{pct}%</span>
+                      <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background:'rgba(13,30,27,0.1)' }}>
+                        <div className="h-full rounded-full transition-all" style={{ width:`${pct}%`, background:info.color }}/>
+                      </div>
+                      <p className="text-[10px] font-mono" style={{ color:'rgba(13,30,27,0.45)' }}>Severity: <strong style={{ color:info.color }}>{info.severity}</strong> · BBox: [{d.bbox?.map(Math.round).join(',')}]</p>
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-1.5 mb-3 ml-2">
-                      <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: info.color }}></div>
+                  );
+                })}
+              </div>
+
+              {gpsStatus==='ok'&&gpsPos&&(
+                <div className="p-3 rounded-xl space-y-1.5" style={{ background:T.creamDark, border:'1px solid rgba(13,30,27,0.08)' }}>
+                  <div className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color:'rgba(13,30,27,0.4)', fontFamily:'monospace' }}>{autoPinned?'✅ Auto-pinned at':'📍 Will be pinned at'}</div>
+                  {[[`Coordinates`,`${gpsPos.lat.toFixed(6)}, ${gpsPos.lng.toFixed(6)}`],roadName&&['Road',roadName],gpsAccuracy&&['GPS Accuracy',`±${gpsAccuracy}m`]].filter(Boolean).map(([l,v])=>(
+                    <div key={l} className="flex justify-between text-xs">
+                      <span style={{ color:'rgba(13,30,27,0.45)' }}>{l}</span>
+                      <span className="font-mono font-bold" style={{ color:T.teal }}>{v}</span>
                     </div>
-                    <p className="text-xs text-slate-500 font-mono ml-2">
-                      Severity: <strong style={{ color: info.color }}>{info.severity}</strong>
-                      &nbsp;·&nbsp;BBox: [{d.bbox?.map(Math.round).join(', ')}]
-                    </p>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
             </div>
+          )}
 
-            {/* GPS pin preview */}
-            {gpsStatus === 'ok' && gpsPos && (
-              <div className="p-3 bg-slate-800/60 border border-slate-700 rounded-lg text-xs space-y-1">
-                <div className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-2">
-                  {autoPinned ? '✅ Auto-pinned at' : '📍 Will be pinned at'}
+          {/* Model info */}
+          <div className="mt-6 pt-5 border-t" style={{ borderColor:'rgba(13,30,27,0.08)' }}>
+            <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color:'rgba(13,30,27,0.4)', fontFamily:'monospace' }}>Model Pipeline</p>
+            <div className="space-y-2">
+              {[['Architecture','YOLOv8-Nano'],['Training data','GRDDC + IDD (Kaggle)'],['Classes','D00 · D10 · D20 · D40'],['Inference server','HF Spaces (Docker)'],['Target mAP@50','≥ 0.50'],['Location source',gpsStatus==='ok'?'✅ Live GPS':'⚠️ GPS pending']].map(([k,v])=>(
+                <div key={k} className="flex justify-between text-xs pb-1.5 border-b" style={{ borderColor:'rgba(13,30,27,0.06)' }}>
+                  <span style={{ color:'rgba(13,30,27,0.45)' }}>{k}</span>
+                  <span className="font-mono font-bold" style={{ color:T.teal }}>{v}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Coordinates</span>
-                  <span className="text-white font-mono">{gpsPos.lat.toFixed(6)}, {gpsPos.lng.toFixed(6)}</span>
-                </div>
-                {roadName && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Road</span>
-                    <span className="text-white">{roadName}</span>
-                  </div>
-                )}
-                {gpsAccuracy && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">GPS Accuracy</span>
-                    <span style={{ color: accuracyColor }}>±{gpsAccuracy}m</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Model pipeline info */}
-        <div className="mt-8 pt-6 border-t border-slate-800">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Model Pipeline</p>
-          <div className="space-y-2 text-xs">
-            {[
-              ['Architecture',     'YOLOv8-Nano'],
-              ['Training data',    'GRDDC + IDD (Kaggle)'],
-              ['Classes',          'D00 · D10 · D20 · D40'],
-              ['Inference server', 'HF Spaces (Docker)'],
-              ['Target mAP@50',    '≥ 0.50'],
-              ['Location source',  gpsStatus === 'ok' ? '✅ Live GPS' : '⚠️ GPS pending'],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between border-b border-slate-800/50 pb-1">
-                <span className="text-slate-500">{k}</span>
-                <span className="text-slate-300 font-mono">{v}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes spin     { to { transform: rotate(360deg); } }
-        @keyframes gps-ping { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.5); opacity:0.4; } }
-      `}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
     </div>
   );
 }

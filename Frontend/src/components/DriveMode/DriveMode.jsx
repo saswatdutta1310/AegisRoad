@@ -20,6 +20,7 @@ function loadAlertPrefs() {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
+const ALERT_RADIUS_M = 1000   // 1km route proximity scan radius
 const HAZARDS = [
   { id:1, lat:16.5417, lng:80.5152, cls:'D40', severity:'critical', road:'NH-16, Vijayawada', contractor:'Ramesh Road Works' },
   { id:2, lat:16.3067, lng:80.4365, cls:'D20', severity:'high',     road:'SH-47, Guntur',    contractor:'AP Infrastructure Ltd' },
@@ -241,60 +242,30 @@ function InstallBanner({ onDismiss }) {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg,#1a2744,#0f1a30)',
-      border: '1px solid #2d4a8a',
-      borderRadius: 12,
+      background: 'rgba(200,212,0,0.1)',
+      border: '1px solid rgba(200,212,0,0.25)',
+      borderRadius: 14,
       padding: '14px 16px',
       marginBottom: 16,
       position: 'relative',
     }}>
-      {/* Dismiss */}
-      <button
-        onClick={onDismiss}
-        style={{ position:'absolute',top:10,right:12,background:'none',border:'none',
-          color:'#5a6480',fontSize:18,cursor:'pointer',lineHeight:1 }}
-        aria-label="Dismiss"
-      >✕</button>
-
+      <button onClick={onDismiss} style={{ position:'absolute',top:10,right:12,background:'none',border:'none', color:'rgba(255,255,255,0.5)',fontSize:18,cursor:'pointer',lineHeight:1 }} aria-label="Dismiss">✕</button>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom: showIOSHelp ? 12 : 0 }}>
-        <div style={{ fontSize:28 }}>📱</div>
+        <div style={{ fontSize:24 }}>📱</div>
         <div>
-          <div style={{ fontSize:14, fontWeight:700, color:'#dde2ee', marginBottom:2 }}>
-            Add AegisRoad to Home Screen
-          </div>
-          <div style={{ fontSize:12, color:'#5a6480' }}>
-            Get instant access, offline support & faster alerts
-          </div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#fff', marginBottom:2 }}>Add AegisRoad to Home Screen</div>
+          <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)' }}>Get instant access, offline support & faster alerts</div>
         </div>
       </div>
-
       {showIOSHelp ? (
-        <div style={{
-          background:'rgba(79,142,247,0.1)', border:'1px solid rgba(79,142,247,0.3)',
-          borderRadius:8, padding:'10px 14px', fontSize:12, color:'#a0b4d6', lineHeight:1.8,
-        }}>
-          <strong style={{ color:'#4f8ef7' }}>On Safari (iOS):</strong><br/>
-          1. Tap the <strong style={{color:'#dde2ee'}}>Share button</strong> (box with arrow ↑) at the bottom<br/>
-          2. Scroll down and tap <strong style={{color:'#dde2ee'}}>"Add to Home Screen"</strong><br/>
-          3. Tap <strong style={{color:'#dde2ee'}}>"Add"</strong> — AegisRoad appears on your home screen!
+        <div style={{ background:'rgba(200,212,0,0.08)', border:'1px solid rgba(200,212,0,0.2)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'rgba(255,255,255,0.6)', lineHeight:1.8 }}>
+          <strong style={{ color:'#C8D400' }}>On Safari (iOS):</strong><br/>
+          1. Tap the <strong style={{color:'#fff'}}>Share button</strong> (↑) at the bottom<br/>
+          2. Scroll down and tap <strong style={{color:'#fff'}}>"Add to Home Screen"</strong><br/>
+          3. Tap <strong style={{color:'#fff'}}>"Add"</strong> to confirm
         </div>
       ) : (
-        <button
-          onClick={handleInstall}
-          style={{
-            marginTop: 10,
-            width: '100%',
-            padding: '10px 0',
-            background: 'linear-gradient(135deg,#4f8ef7,#7c3aed)',
-            border: 'none',
-            borderRadius: 8,
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: 'pointer',
-            letterSpacing: 0.3,
-          }}
-        >
+        <button onClick={handleInstall} style={{ marginTop:10, width:'100%', padding:'10px 0', background:'#C8D400', border:'none', borderRadius:10, color:'#072E24', fontSize:13, fontWeight:900, cursor:'pointer', fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:'0.06em', textTransform:'uppercase' }}>
           {isIOS ? '📲 How to install on iOS?' : '⬇️ Install App'}
         </button>
       )}
@@ -393,22 +364,22 @@ function LocationInput({ label, placeholder, value, onChange, onSelect }) {
 
   return (
     <div ref={wrapRef} style={{ position:'relative', marginBottom:14 }}>
-      <label style={{ fontSize:12, color:'#5a6480', marginBottom:6, display:'block', fontWeight:600 }}>
+      <label style={{ fontSize:12, color:'rgba(255,255,255,0.55)', marginBottom:6, display:'block', fontWeight:600 }}>
         {label}
       </label>
       <div style={{ position:'relative' }}>
         <input
           style={{
-            width:'100%', background:'#161923', border:'1px solid #1e2433',
-            borderRadius:8, padding:'11px 40px 11px 14px', color:'#dde2ee',
+            width:'100%', background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.15)',
+            borderRadius:10, padding:'11px 40px 11px 14px', color:'#ffffff',
             fontSize:14, outline:'none', boxSizing:'border-box',
             transition:'border-color .2s',
           }}
           onFocus={e => {
-            e.target.style.borderColor = '#4f8ef7'
+            e.target.style.borderColor = '#C8D400'
             if (suggestions.length > 0) setShowDrop(true)
           }}
-          onBlur={e => { e.target.style.borderColor = '#1e2433' }}
+          onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.15)' }}
           placeholder={placeholder}
           value={value}
           onChange={handleChange}
@@ -421,39 +392,38 @@ function LocationInput({ label, placeholder, value, onChange, onSelect }) {
           fontSize:15, pointerEvents:'none', transition:'opacity .2s',
         }}>
           {loading
-            ? <span style={{ color:'#4f8ef7', animation:'spin 1s linear infinite', display:'inline-block' }}>⟳</span>
-            : <span style={{ color: value ? '#4f8ef7' : '#5a6480' }}>🔍</span>
+            ? <span style={{ color:'#C8D400', animation:'spin 1s linear infinite', display:'inline-block' }}>⟳</span>
+            : <span style={{ color: value ? '#C8D400' : 'rgba(255,255,255,0.4)' }}>🔍</span>
           }
         </div>
       </div>
 
-      {/* Dropdown suggestions */}
       {showDrop && suggestions.length > 0 && (
         <div style={{
           position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:99999,
-          background:'#161923', border:'1px solid #2a3555', borderRadius:10,
-          overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,0.7)',
+          background:'#072E24', border:'1px solid rgba(200,212,0,0.2)', borderRadius:12,
+          overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,0.5)',
           maxHeight:260, overflowY:'auto',
         }}>
           {suggestions.map((s, i) => (
             <div
               key={i}
-              onMouseDown={e => { e.preventDefault(); handleSelect(s) }}  // mousedown fires before blur
+              onMouseDown={e => { e.preventDefault(); handleSelect(s) }}
               style={{
                 padding:'10px 14px', cursor:'pointer',
-                borderBottom: i < suggestions.length-1 ? '1px solid #0f1117' : 'none',
+                borderBottom: i < suggestions.length-1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                 display:'flex', alignItems:'flex-start', gap:10,
               }}
-              onMouseEnter={e => e.currentTarget.style.background='#1a2030'}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(200,212,0,0.1)'}
               onMouseLeave={e => e.currentTarget.style.background='transparent'}
             >
               <span style={{ fontSize:16, marginTop:1, flexShrink:0 }}>📍</span>
               <div style={{ minWidth:0 }}>
-                <div style={{ fontSize:13, color:'#dde2ee', fontWeight:600, marginBottom:2,
+                <div style={{ fontSize:13, color:'#ffffff', fontWeight:600, marginBottom:2,
                   whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                   {formatShort(s)}
                 </div>
-                <div style={{ fontSize:11, color:'#5a6480', overflow:'hidden',
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', overflow:'hidden',
                   textOverflow:'ellipsis', display:'-webkit-box',
                   WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
                   {formatFull(s)}
@@ -464,13 +434,12 @@ function LocationInput({ label, placeholder, value, onChange, onSelect }) {
         </div>
       )}
 
-      {/* No results */}
       {showDrop && !loading && value.length >= 3 && suggestions.length === 0 && (
         <div style={{
           position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:99999,
-          background:'#161923', border:'1px solid #1e2433', borderRadius:10,
-          padding:'14px', fontSize:13, color:'#5a6480',
-          boxShadow:'0 8px 24px rgba(0,0,0,0.6)',
+          background:'#072E24', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12,
+          padding:'14px', fontSize:13, color:'rgba(255,255,255,0.5)',
+          boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
         }}>
           No locations found — try a different spelling or city name.
         </div>
@@ -695,66 +664,84 @@ export default function DriveMode({ onClose }) {
 
   const s = {
     tab: act => ({
-      padding:'8px 18px', borderRadius:8, border:'none', fontSize:13,
-      fontWeight:600, cursor:'pointer',
-      background: act ? '#4f8ef7' : '#161923',
-      color: act ? '#fff' : '#5a6480',
+      padding:'8px 18px', borderRadius:10, border:'none', fontSize:13,
+      fontWeight:700, cursor:'pointer',
+      background: act ? '#C8D400' : 'rgba(255,255,255,0.06)',
+      color: act ? '#072E24' : 'rgba(255,255,255,0.45)',
+      fontFamily: "'Barlow Condensed', sans-serif",
+      letterSpacing: '0.04em',
       transition:'all .2s',
     }),
     btn: (bg, dis) => ({
-      padding:'12px 18px', borderRadius:10, border:'none', fontSize:14,
-      fontWeight:600, cursor: dis?'not-allowed':'pointer',
-      background: dis?'#1e2433':bg, color:'#fff', opacity:dis?0.5:1,
-      transition:'opacity .2s',
+      padding:'12px 18px', borderRadius:12, border:'none', fontSize:14,
+      fontWeight:700, cursor: dis?'not-allowed':'pointer',
+      background: dis?'rgba(255,255,255,0.06)':bg, color: bg==='#C8D400'?'#072E24':'#fff',
+      opacity:dis?0.4:1, transition:'opacity .2s',
+      fontFamily: "'Barlow Condensed', sans-serif",
+      letterSpacing: '0.04em',
     }),
     hazardCard: sev => ({
       background:`${SEV_COLOR[sev]}18`, border:`1px solid ${SEV_COLOR[sev]}40`,
-      borderLeft:`3px solid ${SEV_COLOR[sev]}`, borderRadius:8,
+      borderLeft:`4px solid ${SEV_COLOR[sev]}`, borderRadius:10,
       padding:'10px 14px', marginBottom:8,
     }),
   }
 
   return (
-    <div
-      style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', zIndex:9999,
-        display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
-      onClick={e => e.target===e.currentTarget && onClose()}
-    >
+    <div style={{
+      minHeight:'100vh', background:'#051f18',
+      color:'#fff', fontFamily:"'Inter', system-ui, sans-serif",
+    }}>
+      {/* ── Page Header ── */}
       <div style={{
-        background:'#0f1117', border:'1px solid #1e2433', borderRadius:16,
-        width:'100%', maxWidth:540, maxHeight:'94vh', overflowY:'auto',
-        padding:24, color:'#dde2ee', fontFamily:'system-ui,sans-serif',
+        background:'#072E24', borderBottom:'1px solid rgba(200,212,0,0.12)',
+        padding:'16px 24px', display:'flex', justifyContent:'space-between', alignItems:'center',
+        position:'sticky', top:0, zIndex:100,
       }}>
-
-        {/* ── Header ── */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <button
+            onClick={onClose}
+            style={{
+              background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)',
+              borderRadius:10, color:'rgba(255,255,255,0.7)', fontSize:14, cursor:'pointer',
+              padding:'6px 12px', display:'flex', alignItems:'center', gap:6,
+              fontFamily:"'Barlow Condensed', sans-serif", fontWeight:700, letterSpacing:'0.04em',
+            }}
+          >
+            ← Back
+          </button>
           <div>
-            <h2 style={{ margin:0, fontSize:20, fontWeight:700 }}>🚗 Drive Mode</h2>
-            <p style={{ margin:'3px 0 0', fontSize:12, color:'#5a6480' }}>
+            <h2 style={{ margin:0, fontSize:22, fontWeight:900, color:'#fff', fontFamily:"'Barlow Condensed', sans-serif", textTransform:'uppercase', letterSpacing:'0.04em' }}>🚗 Drive Mode</h2>
+            <p style={{ margin:'2px 0 0', fontSize:11, color:'rgba(200,212,0,0.6)' }}>
               Route planning · Hazard detection · Live alerts
             </p>
           </div>
-          <button onClick={onClose}
-            style={{ background:'none', border:'none', color:'#5a6480', fontSize:22, cursor:'pointer' }}>
-            ✕
-          </button>
         </div>
+      </div>
+
+      {/* ── Page Body ── */}
+      <div style={{
+        maxWidth:600, margin:'0 auto', padding:'24px 16px',
+      }}>
+        <div style={{
+          background:'#072E24', border:'1px solid rgba(200,212,0,0.12)', borderRadius:20,
+          padding:24,
+        }}>
 
         {/* ── PWA Install Banner ── */}
         {showInstall && <InstallBanner onDismiss={() => setShowInstall(false)} />}
 
-        {/* ── Voice Unlock Banner (shown before voice enabled) ── */}
         {!voiceReady && (
           <div style={{
-            background:'rgba(124,58,237,0.12)', border:'1px solid rgba(124,58,237,0.4)',
-            borderRadius:10, padding:'12px 14px', marginBottom:16,
+            background:'rgba(200,212,0,0.08)', border:'1px solid rgba(200,212,0,0.25)',
+            borderRadius:12, padding:'12px 14px', marginBottom:16,
             display:'flex', alignItems:'center', justifyContent:'space-between', gap:12,
           }}>
             <div>
-              <div style={{ fontSize:13, fontWeight:700, color:'#c084fc', marginBottom:2 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'#C8D400', marginBottom:2 }}>
                 🔇 Voice alerts are disabled
               </div>
-              <div style={{ fontSize:11, color:'#6b5b95' }}>
+              <div style={{ fontSize:11, color:'rgba(200,212,0,0.5)' }}>
                 Tap the button to enable voice + audio alerts
               </div>
             </div>
@@ -762,10 +749,10 @@ export default function DriveMode({ onClose }) {
               onClick={unlockAndTestVoice}
               disabled={testingVoice}
               style={{
-                background:'linear-gradient(135deg,#7c3aed,#4f8ef7)',
-                border:'none', borderRadius:8, padding:'9px 16px',
-                color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer',
+                background:'#C8D400', border:'none', borderRadius:10, padding:'9px 16px',
+                color:'#072E24', fontSize:13, fontWeight:900, cursor:'pointer',
                 flexShrink:0, opacity: testingVoice ? 0.7 : 1,
+                fontFamily:"'Barlow Condensed', sans-serif",
               }}
             >
               {testingVoice ? '⟳ Testing...' : '🔊 Enable Voice'}
@@ -773,14 +760,13 @@ export default function DriveMode({ onClose }) {
           </div>
         )}
 
-        {/* ── Voice Active Indicator ── */}
         {voiceReady && (
           <div style={{
-            background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.3)',
-            borderRadius:8, padding:'8px 14px', marginBottom:14,
+            background:'rgba(21,107,82,0.15)', border:'1px solid rgba(21,107,82,0.4)',
+            borderRadius:10, padding:'8px 14px', marginBottom:14,
             display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:12,
           }}>
-            <span style={{ color:'#10b981' }}>
+            <span style={{ color:'#7fd4b8' }}>
               🔊 Voice active — EN
               {alertPrefs.voiceLanguage && alertPrefs.voiceLanguage !== 'en-IN'
                 ? ` + ${alertPrefs.voiceLanguage.split('-')[0].toUpperCase()}`
@@ -788,30 +774,29 @@ export default function DriveMode({ onClose }) {
             </span>
             <button
               onClick={unlockAndTestVoice}
-              style={{ background:'none', border:'1px solid rgba(16,185,129,0.4)',
-                borderRadius:6, padding:'4px 10px', color:'#10b981', fontSize:11, cursor:'pointer' }}
+              style={{ background:'none', border:'1px solid rgba(21,107,82,0.4)',
+                borderRadius:6, padding:'4px 10px', color:'#7fd4b8', fontSize:11, cursor:'pointer' }}
             >
               Test
             </button>
           </div>
         )}
 
-        {/* ── Active Alert Settings Summary ── */}
         <div style={{
-          background:'#0d1117', border:'1px solid #1e2433', borderRadius:8,
-          padding:'9px 14px', marginBottom:16, fontSize:11, color:'#5a6480',
+          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10,
+          padding:'9px 14px', marginBottom:16, fontSize:11, color:'rgba(255,255,255,0.4)',
           display:'flex', flexWrap:'wrap', gap:'6px 16px',
         }}>
-          <span>📏 Distance: <strong style={{color:'#dde2ee'}}>{alertPrefs.alertDistance}m</strong></span>
-          <span>🔁 Repeat: <strong style={{color:'#dde2ee'}}>
+          <span>📏 Distance: <strong style={{color:'#fff'}}>{alertPrefs.alertDistance}m</strong></span>
+          <span>🔁 Repeat: <strong style={{color:'#fff'}}>
             {alertPrefs.reminderFrequency === 'three' ? '3×' : alertPrefs.reminderFrequency === 'twice' ? '2×' : '1×'}
           </strong></span>
-          <span>🔊 Voice: <strong style={{color: alertPrefs.voiceAlerts ? '#10b981' : '#ef4444'}}>
+          <span>🔊 Voice: <strong style={{color: alertPrefs.voiceAlerts ? '#C8D400' : '#ef4444'}}>
             {alertPrefs.voiceAlerts
               ? `EN${alertPrefs.voiceLanguage && alertPrefs.voiceLanguage !== 'en-IN' ? ` + ${alertPrefs.voiceLanguage.split('-')[0].toUpperCase()}` : ''}`
               : 'off'}
           </strong></span>
-          <span>📳 Vibrate: <strong style={{color: alertPrefs.vibrationAlerts ? '#10b981' : '#ef4444'}}>
+          <span>📳 Vibrate: <strong style={{color: alertPrefs.vibrationAlerts ? '#C8D400' : '#ef4444'}}>
             {alertPrefs.vibrationAlerts ? 'on' : 'off'}
           </strong></span>
         </div>
@@ -853,7 +838,7 @@ export default function DriveMode({ onClose }) {
 
             {/* Selection confirmation */}
             {(fromPlace || toPlace) && (
-              <div style={{ background:'#161923', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:12 }}>
+              <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:12 }}>
                 {fromPlace
                   ? <div style={{ color:'#10b981', marginBottom:4 }}>✅ From: {fromText}</div>
                   : <div style={{ color:'#f59e0b' }}>⚠️ Select start from dropdown</div>
@@ -875,21 +860,21 @@ export default function DriveMode({ onClose }) {
             <button
               onClick={planRoute}
               disabled={loading || !fromPlace || !toPlace}
-              style={{ ...s.btn('#4f8ef7', loading || !fromPlace || !toPlace), width:'100%' }}
+              style={{ ...s.btn('#C8D400', loading || !fromPlace || !toPlace), width:'100%' }}
             >
               {loading ? '🔍 Searching route & hazards...' : '🔍 Find Route & Check Hazards'}
             </button>
 
-            <div style={{ marginTop:10, fontSize:11, color:'#5a6480', lineHeight:1.7 }}>
+            <div style={{ marginTop:10, fontSize:11, color:'rgba(255,255,255,0.4)', lineHeight:1.7 }}>
               💡 Type at least 3 letters to see location suggestions from OpenStreetMap
             </div>
 
             {log.length > 0 && (
               <div style={{ marginTop:14 }}>
-                <div style={{ fontSize:11, color:'#5a6480', marginBottom:6 }}>LOG</div>
-                <div style={{ background:'#070809', borderRadius:8, padding:10,
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:6 }}>LOG</div>
+                <div style={{ background:'rgba(0,0,0,0.3)', borderRadius:10, padding:10,
                   maxHeight:100, overflowY:'auto', fontFamily:'monospace', fontSize:11 }}>
-                  {log.map((l,i) => <div key={i} style={{ color:'#5a6480', marginBottom:3 }}>{l}</div>)}
+                  {log.map((l,i) => <div key={i} style={{ color:'rgba(255,255,255,0.5)', marginBottom:3 }}>{l}</div>)}
                 </div>
               </div>
             )}
@@ -899,33 +884,33 @@ export default function DriveMode({ onClose }) {
         {/* ── ROUTE INFO TAB ── */}
         {tab==='drive' && routeResult && (
           <div>
-            <div style={{ background:'#161923', borderRadius:10, padding:14, marginBottom:16 }}>
+            <div style={{ background:'rgba(255,255,255,0.06)', borderRadius:12, padding:14, marginBottom:16 }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, textAlign:'center' }}>
                 <div>
-                  <div style={{ fontSize:22, fontWeight:700, color:'#4f8ef7' }}>{routeResult.distKm}</div>
-                  <div style={{ fontSize:11, color:'#5a6480' }}>km</div>
+                  <div style={{ fontSize:26, fontWeight:900, color:'#C8D400', fontFamily:"'Barlow Condensed',sans-serif" }}>{routeResult.distKm}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>km</div>
                 </div>
                 <div>
-                  <div style={{ fontSize:22, fontWeight:700, color:'#10b981' }}>{routeResult.durMin}</div>
-                  <div style={{ fontSize:11, color:'#5a6480' }}>min est.</div>
+                  <div style={{ fontSize:26, fontWeight:900, color:'#7fd4b8', fontFamily:"'Barlow Condensed',sans-serif" }}>{routeResult.durMin}</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>min est.</div>
                 </div>
                 <div>
-                  <div style={{ fontSize:22, fontWeight:700,
-                    color: routeResult.hazards.length > 0 ? '#ef4444' : '#10b981' }}>
+                  <div style={{ fontSize:26, fontWeight:900, fontFamily:"'Barlow Condensed',sans-serif",
+                    color: routeResult.hazards.length > 0 ? '#ef4444' : '#7fd4b8' }}>
                     {routeResult.hazards.length}
                   </div>
-                  <div style={{ fontSize:11, color:'#5a6480' }}>hazards</div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>hazards</div>
                 </div>
               </div>
             </div>
 
-            <div style={{ background:'#161923', borderRadius:8, padding:'10px 14px', marginBottom:14, fontSize:13 }}>
-              <span style={{ color:'#10b981' }}>📍</span> {fromText}
-              <span style={{ color:'#5a6480', margin:'0 8px' }}>→</span>
+            <div style={{ background:'rgba(255,255,255,0.06)', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13 }}>
+              <span style={{ color:'#7fd4b8' }}>📍</span> {fromText}
+              <span style={{ color:'rgba(255,255,255,0.3)', margin:'0 8px' }}>→</span>
               <span style={{ color:'#ef4444' }}>🏁</span> {toText}
             </div>
 
-            <div style={{ fontSize:12, color:'#5a6480', marginBottom:8 }}>HAZARDS ON ROUTE</div>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:8 }}>HAZARDS ON ROUTE</div>
             {routeResult.hazards.length === 0 ? (
               <div style={{ background:'rgba(16,185,129,.1)', border:'1px solid rgba(16,185,129,.3)',
                 borderRadius:8, padding:'12px 14px', fontSize:13, color:'#10b981', marginBottom:16 }}>
@@ -938,14 +923,14 @@ export default function DriveMode({ onClose }) {
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                       <div>
                         <span style={{ fontWeight:700, color:SEV_COLOR[h.severity] }}>{h.cls}</span>
-                        <span style={{ fontSize:12, color:'#5a6480', marginLeft:8 }}>{h.road}</span>
+                        <span style={{ fontSize:12, color:'rgba(255,255,255,0.45)', marginLeft:8 }}>{h.road}</span>
                       </div>
                       <span style={{ background:SEV_COLOR[h.severity]+'30', color:SEV_COLOR[h.severity],
                         fontSize:10, padding:'2px 8px', borderRadius:100, fontWeight:600, textTransform:'uppercase' }}>
                         {h.severity}
                       </span>
                     </div>
-                    <div style={{ fontSize:11, color:'#5a6480', marginTop:4 }}>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:4 }}>
                       Contractor: {h.contractor}
                     </div>
                   </div>
@@ -954,7 +939,7 @@ export default function DriveMode({ onClose }) {
             )}
 
             <div style={{ display:'flex', gap:10 }}>
-              <button onClick={() => setTab('plan')} style={{ ...s.btn('#1e2433', false), flex:1 }}>
+              <button onClick={() => setTab('plan')} style={{ ...s.btn('rgba(255,255,255,0.1)', false), flex:1, color:'#fff' }}>
                 ← Change Route
               </button>
               <button
@@ -962,7 +947,7 @@ export default function DriveMode({ onClose }) {
                   if (!voiceReady) unlockAndTestVoice().then(() => setTab('live'))
                   else setTab('live')
                 }}
-                style={{ ...s.btn('#7c3aed', false), flex:2 }}
+                style={{ ...s.btn('#C8D400', false), flex:2 }}
               >
                 🚗 Start Drive →
               </button>
@@ -982,10 +967,10 @@ export default function DriveMode({ onClose }) {
                   </div>
                 )}
                 <div style={{ display:'flex', gap:10, marginBottom:16 }}>
-                  <button onClick={startSim} style={{ ...s.btn('#7c3aed', !voiceReady), flex:1 }}>
+                  <button onClick={startSim} style={{ ...s.btn('#C8D400', !voiceReady), flex:1 }}>
                     🎮 Simulate Route
                   </button>
-                  <button onClick={startReal} style={{ ...s.btn('#4f8ef7', !voiceReady), flex:1 }}>
+                  <button onClick={startReal} style={{ ...s.btn('rgba(255,255,255,0.12)', !voiceReady), flex:1, color:'#fff' }}>
                     📍 Real GPS
                   </button>
                 </div>
@@ -1009,7 +994,7 @@ export default function DriveMode({ onClose }) {
                 <div style={{ fontSize:14, marginBottom:2 }}>
                   <strong>{activeAlert.cls}</strong> — {activeAlert.road}
                 </div>
-                <div style={{ fontSize:12, color:'#5a6480', marginBottom:10 }}>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:10 }}>
                   Severity: {activeAlert.severity} · {activeAlert.contractor}
                 </div>
                 <button
@@ -1022,40 +1007,39 @@ export default function DriveMode({ onClose }) {
               </div>
             )}
 
-            {/* GPS position */}
             {position && (
-              <div style={{ background:'#161923', borderRadius:8, padding:'8px 14px',
-                marginBottom:12, fontSize:11, color:'#5a6480', fontFamily:'monospace' }}>
+              <div style={{ background:'rgba(255,255,255,0.07)', borderRadius:10, padding:'8px 14px',
+                marginBottom:12, fontSize:11, color:'rgba(255,255,255,0.6)', fontFamily:'monospace' }}>
                 📍 {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
               </div>
             )}
 
             {/* Hazards list */}
-            <div style={{ background:'#161923', borderRadius:8, padding:'10px 14px', marginBottom:14 }}>
-              <div style={{ fontSize:11, color:'#5a6480', marginBottom:6 }}>HAZARDS ON ROUTE</div>
+            <div style={{ background:'rgba(255,255,255,0.06)', borderRadius:10, padding:'10px 14px', marginBottom:14 }}>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:6 }}>HAZARDS ON ROUTE</div>
               {routeResult.hazards.length === 0
-                ? <span style={{ fontSize:12, color:'#10b981' }}>✅ Clear route</span>
+                ? <span style={{ fontSize:12, color:'#7fd4b8' }}>✅ Clear route</span>
                 : routeResult.hazards.map(h => (
                     <div key={h.id} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4, fontSize:12 }}>
                       <span style={{ color:SEV_COLOR[h.severity], fontSize:8 }}>●</span>
-                      <span style={{ fontWeight:600 }}>{h.cls}</span>
-                      <span style={{ color:'#5a6480' }}>{h.road}</span>
+                      <span style={{ fontWeight:600, color:'#fff' }}>{h.cls}</span>
+                      <span style={{ color:'rgba(255,255,255,0.45)' }}>{h.road}</span>
                     </div>
                   ))
               }
             </div>
 
             {/* Activity log */}
-            <div style={{ fontSize:11, color:'#5a6480', marginBottom:6 }}>ACTIVITY LOG</div>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:6 }}>ACTIVITY LOG</div>
             <div style={{
-              background:'#070809', borderRadius:8, padding:10,
+              background:'rgba(0,0,0,0.3)', borderRadius:10, padding:10,
               height:160, overflowY:'auto', fontFamily:'monospace', fontSize:11,
             }}>
               {log.length === 0
-                ? <span style={{ color:'#5a6480' }}>Waiting to start...</span>
+                ? <span style={{ color:'rgba(255,255,255,0.3)' }}>Waiting to start...</span>
                 : log.map((l,i) => (
                     <div key={i} style={{
-                      color: l.includes('🚨') || l.includes('HAZARD') ? '#ef4444' : '#5a6480',
+                      color: l.includes('🚨') || l.includes('HAZARD') ? '#ef4444' : 'rgba(255,255,255,0.45)',
                       marginBottom:3,
                     }}>
                       {l}
@@ -1073,6 +1057,7 @@ export default function DriveMode({ onClose }) {
             50%      { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
           }
         `}</style>
+        </div>
       </div>
     </div>
   )
